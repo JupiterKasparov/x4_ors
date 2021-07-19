@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="5">
+      <Unit0>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <UsageCount Value="54"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="u_radio.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="40"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="u_song.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="25"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="u_logger.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="u_utils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="24"/>
+        <Loaded Value="True"/>
+      </Unit4>
+    </Units>
+    <JumpHistory Count="12" HistoryIndex="11">
+      <Position1>
+        <Filename Value="u_radio.pas"/>
+      </Position1>
+      <Position2>
+        <Filename Value="u_radio.pas"/>
+        <Caret Line="129" Column="8" TopLine="116"/>
+      </Position2>
+      <Position3>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+      </Position3>
+      <Position4>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="133" Column="52" TopLine="120"/>
+      </Position4>
+      <Position5>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="27" Column="41" TopLine="16"/>
+      </Position5>
+      <Position6>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="71" Column="8" TopLine="47"/>
+      </Position6>
+      <Position7>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="76" Column="12" TopLine="52"/>
+      </Position7>
+      <Position8>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="78" Column="31" TopLine="54"/>
+      </Position8>
+      <Position9>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="79" Column="22" TopLine="55"/>
+      </Position9>
+      <Position10>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="81" Column="27" TopLine="57"/>
+      </Position10>
+      <Position11>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="126" Column="46" TopLine="105"/>
+      </Position11>
+      <Position12>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="135" Column="6" TopLine="122"/>
+      </Position12>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>
