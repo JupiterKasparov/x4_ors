@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mdscript name="X4_ORS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+	<cues>
+		<!--
+			This cue will register the LUA script, and reset everything.
+				* The LUA script is registered with "SirNukes' Mod Support APIs" and "Kuertee's UI Extensions".
+				* The Timer cue is cancelled, because an updated LUA script would cause trouble otherwise (cause unknown).
+				* The RegReset cue must be reset, to keep the mod usable in saved games too.
+		-->
+		<cue name="X4_ORS_Register">
+			<conditions>
+				<event_ui_triggered screen="'Lua_Loader'" control="'Ready'" />
+			</conditions>
+			<actions>
+				<!-- Delete initialized data from previous sessions -->
+				<remove_value name="player.entity.$x4_ors_latency" />
+				<cancel_cue cue="X4_ORS_Timer" />
+				
+				<!-- Register the script -->
+				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_menu_toplevel'" />
+				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_hud'" />
+				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.X4_ORS.x4_ors_controller'" />
+				
+				<!-- Keep usable -->
+				<reset_cue cue="X4_ORS_RegReset" />
+			</actions>
+		</cue>
+
+		<!--
+			This cue will reset the everything.
+				* Once the Register cue completes, this cue is started.
+				* The Register cue must be reset, to keep the mod usable in saved games too. 
+				* Timer cue must be reset, because it was cancelled earlier.
+		-->
+		<cue name="X4_ORS_RegReset" checkinterval="0.1s">
+			<conditions>
+				<check_value value="player.entity.$x4_ors_latency?" />
+				<check_value value="X4_ORS_Register.state == cuestate.complete" />
+			</conditions>
+			<delay exact="0.05s" />
+			<actions>
+				<set_value name="$X4_ORS_IsSpeaking" exact="false" />
+				<reset_cue cue="X4_ORS_Register" />
+				<reset_cue cue="X4_ORS_Timer" />
+			</actions>
+			<delay exact="[(player.entity.$x4_ors_latency / 4), 5].max * 1ms" />
+		</cue>
+
+		<!--
+			This cue will run regularly. Purposes:
+				* Fire the main timer event (send data to EXE)
+				* Lower/restore music volume, upon speak begin/end
+		-->
+		<cue name="X4_ORS_Timer" checkinterval="0.1s">
+			<conditions>
+				<check_value value="player.entity.$x4_ors_latency?" />
+				<check_value value="X4_ORS_RegReset.state == cuestate.complete" />
+			</conditions>
+			<delay exact="[(player.entity.$x4_ors_latency / 4), 5].max * 1ms" />
+			<actions>
+				<!-- Lower the radio volume, if anybody's speaking to us. So we can hear, what they say. -->
+				<do_if value="player.isinconversation or (player.speakpriority gt 0) or (player.computer and player.computer.isspeaking)">
+					<do_if value="not X4_ORS_RegReset.$X4_ORS_IsSpeaking">
+						<set_value name="X4_ORS_RegReset.$X4_ORS_IsSpeaking" exact="true" />
+						<raise_lua_event name="'X4_ORS_StartSpeak'" />
+					</do_if>
+				</do_if>
+				<do_elseif value="X4_ORS_RegReset.$X4_ORS_IsSpeaking">
+					<set_value name="X4_ORS_RegReset.$X4_ORS_IsSpeaking" exact="false" />
+					<raise_lua_event name="'X4_ORS_EndSpeak'" />
+				</do_elseif>
+				
+				<!-- Fire the LUA event. The LUA controls the EXE. -->
+				<raise_lua_event name="'X4_ORS_Tick'" />
+				<reset_cue cue="this" />
+			</actions>
+		</cue>
+	</cues>
+</mdscript>

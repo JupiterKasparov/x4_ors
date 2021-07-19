@@ -1,0 +1,71 @@
+*************************************************************************************************************
+** List of factions, that can be used as radio station owners.                                             **
+** Note, that there are mods, that add factions to the game. In that case, those factions can be used too! **
+** I've included the list of factions for some commonly used mods too.                                     **
+*************************************************************************************************************
+
+** ---------------- **
+* Base game factions *
+** ---------------- **
+argon
+alliance
+antigone
+buccaneers
+civilian
+criminal
+hatikvah
+holyorder
+holyorderfanatic
+khaak
+ministry
+ownerless
+paranid
+player
+scaleplate
+smuggler
+teladi
+trinity
+visitor
+xenon
+
+** ---------------------------- **
+* DLC: 'Split Vendetta' factions *
+** ---------------------------- **
+court
+fallensplit
+freesplit
+split
+
+** -------------------------------- **
+* DLC: 'Cradle of Humanity' factions *
+** -------------------------------- **
+terran
+pioneers
+yaki
+
+** ---------------------------- **
+* MOD: 'Qang Qbeng mod' factions *
+** ---------------------------- **
+kuangkubeng
+
+** -------------------------- **
+* MOD: 'The Ancients' factions *
+** -------------------------- **
+ancients
+falamunga
+familytharka
+kyriak
+sarpaggio
+sohnen
+
+** ----------------------------------- **
+* MOD: 'Star Wars Interworlds' factions *
+** ----------------------------------- **
+bountyhunters
+galempire
+
+** --------------------------------------- **
+* MOD: 'Rise of the Ossian Raider' factions *
+** --------------------------------------- **
+ossianraider
+terrantrader

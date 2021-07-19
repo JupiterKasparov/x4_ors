@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<content id="jupiter_x4_own_radio_stations" name="Own Radio Stations" description="Ability to listen to looped radio stations, MP3, and on-line radio in-game" author="Jupiter Kasparov" version="015" date="2021-06-20" save="0" enabled="1">
+	<dependency version="300" />
+	<dependency id="ws_2042901274" name="SirNukes Mod Support APIs" />
+	<dependency id="kuerteeUIExtensionsAndHUD" name="kuertee UI Extensions and HUD" />
+</content>
