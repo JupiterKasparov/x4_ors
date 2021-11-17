@@ -19,7 +19,7 @@
     </i18n>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MinorVersionNr Value="15"/>
+      <MinorVersionNr Value="16"/>
       <StringTable Comments="64-bit, supports online streams, supports multi-owner stations, supports linear volume scale" CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2021" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">

@@ -57,6 +57,7 @@ type
     MasterLoudness: double;
     MaxLatency: integer;
     RandomizeTracks: boolean;
+    NoOnlineStreams: boolean;
   end;
 
 var
@@ -393,6 +394,8 @@ begin
   programdata.MasterLoudness := min(1.0, max(0.0, internal_ReadFloat('Global.LoudnessFactor', 1.0)));
   // Randomize tracks?
   programdata.RandomizeTracks := (internal_ReadInt('Global.RandomizeTracks', 0) <> 0);
+  // No online streams?
+  programdata.NoOnlineStreams := (internal_ReadInt('Global.NoOnlineStreams', 0) <> 0);;
 
   // Linearize volume?
   u_utils.bLinearizeVolume := (internal_ReadInt('Global.UseLinearVolume', 0) <> 0);
@@ -408,6 +411,8 @@ begin
            Log('[INIT]: Empty radio station file name!')
         else if (not IsNetFile(filename)) and (not FileExists(filename)) then
            Log(Format('[INIT]: Radio station file ''%s'' does not exist!', [filename]))
+        else if IsNetFile(filename) and programdata.NoOnlineStreams then
+           Log(Format('[INIT]: Application is set to ignore online streams, ignoring ''%s''!', [filename]))
         else
            begin
             radio := TRadioStation.Create(filename);

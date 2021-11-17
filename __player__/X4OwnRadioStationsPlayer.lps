@@ -9,6 +9,8 @@
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
+        <TopLine Value="421"/>
+        <CursorPos X="38" Y="472"/>
         <UsageCount Value="54"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -16,6 +18,8 @@
         <Filename Value="u_radio.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="4"/>
+        <TopLine Value="125"/>
+        <CursorPos X="5" Y="145"/>
         <UsageCount Value="40"/>
         <Loaded Value="True"/>
       </Unit1>
@@ -23,6 +27,8 @@
         <Filename Value="u_song.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="2"/>
+        <TopLine Value="100"/>
+        <CursorPos X="5" Y="150"/>
         <UsageCount Value="25"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -41,7 +47,7 @@
         <Loaded Value="True"/>
       </Unit4>
     </Units>
-    <JumpHistory Count="12" HistoryIndex="11">
+    <JumpHistory Count="18" HistoryIndex="17">
       <Position1>
         <Filename Value="u_radio.pas"/>
       </Position1>
@@ -88,6 +94,30 @@
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
         <Caret Line="135" Column="6" TopLine="122"/>
       </Position12>
+      <Position13>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="594" TopLine="583"/>
+      </Position13>
+      <Position14>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="489" TopLine="476"/>
+      </Position14>
+      <Position15>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="491" TopLine="479"/>
+      </Position15>
+      <Position16>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="493" TopLine="479"/>
+      </Position16>
+      <Position17>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="501" TopLine="489"/>
+      </Position17>
+      <Position18>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+        <Caret Line="540" TopLine="528"/>
+      </Position18>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>
