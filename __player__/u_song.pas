@@ -5,7 +5,7 @@ unit u_song;
 interface
 
 uses
-  Classes, SysUtils, BASS, u_utils;
+  Classes, SysUtils, BASS, u_utils, u_logger, FileUtil;
 
 type
   TSongStatus = (ssNone, ssStopped, ssPaused, ssPlaying, ssError);
@@ -14,10 +14,10 @@ type
   private
     bassSample: HSAMPLE;
     bassChannel: HCHANNEL;
-    _isonline, _onlinepaused: boolean;
+    _isonline, _onlinepaused, _isdummy: boolean;
     _status: TSongStatus;
     _vol: double;
-    _filename, _errorStr: string;
+    _filename, _dummyfile, _errorStr: string;
     procedure int_SetError(err: integer);
     function int_GetStatus: TSongStatus;
     procedure int_SetStatus(st: TSongStatus);
@@ -38,6 +38,9 @@ type
   end;
 
 implementation
+
+var
+  tempfilecount: integer = 0;
 
 procedure TPlayableAudioTrack.int_SetError(err: integer);
 begin
@@ -141,7 +144,7 @@ begin
   else if (vol < 0.0) then
      vol := 0.0;
   _vol := vol;
-  if u_utils.bLinearizeVolume then // If the program must linearize the volume, then explicitly linearize it here!
+  if bLinearizeVolume then // If the program must linearize the volume, then explicitly linearize it here!
      lv := (2 * vol) - (vol * vol)
   else
      lv := _vol;
@@ -184,10 +187,12 @@ constructor TPlayableAudioTrack.Create(fn: string);
 begin
   inherited Create;
   _status := ssNone;
+  _dummyfile := '';
   _errorStr := '';
   _vol := 1.0;
   _isonline := false;
   _onlinepaused := false;
+  _isdummy := false;
   _filename := fn;
   if IsNetFile(_filename) then
      _isonline := true
@@ -197,8 +202,34 @@ begin
        bassSample := BASS_SampleLoad(BOOL(0), PChar(_filename), 0, 0, 1, 0);
        if (bassSample = 0) then
           begin
-            _status := ssError;
-            int_SetError(BASS_ErrorGetCode);
+            // Maybe the filename is bad (cyrillic, etc)? Copy it to TEMP with acceptable filename, and try again, boy!
+            Log(Format('[FAILSAFE]: ''%s'' cannot be loaded - maybe because of its file name? Trying to reload it from temporary file...', [_filename]));
+            _dummyfile := Format('%s\tmp%d%s', [x4_ors_temp_dir, tempfilecount, ExtractFileExt(_filename)]);
+            if not DirectoryExists(ExtractFilePath(_dummyfile)) then
+               CreateDir(ExtractFilePath(_dummyfile));
+            if CopyFile(_filename, _dummyfile, true, false) then
+               begin
+                 _isdummy := true;
+                 bassSample := BASS_SampleLoad(BOOL(0), PChar(_dummyfile), 0, 0, 1, 0);
+                 if (bassSample = 0) then
+                    begin
+                      Log(Format('[FAILSAFE]: Failed to load ''%s'' from temporary file!', [_filename]));
+                      _status := ssError;
+                      int_SetError(BASS_ErrorGetCode);
+                    end
+                 else
+                     begin
+                       Log(Format('[FAILSAFE]: Successfully loaded ''%s'' from temporary file!', [_filename]));
+                       _status := ssStopped;
+                     end;
+                 inc(tempfilecount);
+               end
+            else
+               begin
+                 Log(Format('[FAILSAFE]: Failed to create temporary file for ''%s''!', [_filename]));
+                 _status := ssError;
+                 int_SetError(BASS_ErrorGetCode);
+               end;
           end
        else
           _status := ssStopped;
@@ -210,6 +241,8 @@ begin
   int_SetStatus(ssStopped);
   if (_status <> ssError) and (not _isonline) then
      BASS_SampleFree(bassSample);
+  if _isdummy and FileExists(_dummyfile) then
+     DeleteFile(_dummyfile);
   inherited;
 end;
 

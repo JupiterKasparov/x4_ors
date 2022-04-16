@@ -28,6 +28,7 @@ type
     procedure DoProgress;
     procedure SkipNextTrack;
     procedure Replay;
+    procedure WriteMP3Report(fn: string);
     property Valid: boolean read IsValid;
     property IsMP3Station: boolean read _ismp3;
   end;
@@ -245,6 +246,21 @@ begin
        if (_tracks[_curr_index].Status = ssPlaying) then
           _tracks[_curr_index].PositionMs := 0;
      end;
+end;
+
+procedure TRadioStation.WriteMP3Report(fn: string);
+var
+  f: System.Text;
+  i: integer;
+begin
+  System.Assign(f, fn);
+  {$I-}
+  Rewrite(f);
+  for i := 0 to _tracks.Count - 1 do
+      if (_tracks[i].Status <> ssError) then
+         writeln(f, _tracks[i].FileName);
+  System.Close(f);
+  {$I+}
 end;
 
 end.

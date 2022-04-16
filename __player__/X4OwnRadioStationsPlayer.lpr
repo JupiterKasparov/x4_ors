@@ -40,7 +40,7 @@ type
     {Nearest stations by faction}
     NearestStations: array of record
       Owner: string;
-      Distance: double; // Meters
+      Distance: double;
     end;
   end;
 
@@ -462,6 +462,7 @@ begin
           radio := TRadioStation.Create(mp3list, true);
           if radio.Valid then
              begin
+              radio.WriteMP3Report('MP3Report.txt');
               SetLength(stations, Length(stations) + 1);
               with stations[High(stations)] do
                    begin

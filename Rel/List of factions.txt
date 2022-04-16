@@ -43,10 +43,11 @@ terran
 pioneers
 yaki
 
-** ---------------------------- **
-* MOD: 'Qang Qbeng mod' factions *
-** ---------------------------- **
-kuangkubeng
+** -------------------------------- **
+* DLC: 'Tides of Avarice' factions *
+** -------------------------------- **
+loanshark
+scavenger
 
 ** -------------------------- **
 * MOD: 'The Ancients' factions *

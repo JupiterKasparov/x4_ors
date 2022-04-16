@@ -14,7 +14,7 @@ procedure LogError(xcpt: TObject; addr: Pointer);
 implementation
 
 const
-  logname: string = 'log.txt';
+  logname: string = 'x4_ors.log';
 
 var
   bLogActive: boolean = false;

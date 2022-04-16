@@ -397,7 +397,7 @@ local function ProcessScriptMain(shmem)
 						
 						if previndex ~= rsindex then
 							if (rsindex < 0) or (rsindex >= #rsnames) then
-								radiotext = "[RADIO OFF]"
+								radiotext = "\027[faction_ownerless]\027X"
 							else
 								radiotext = rsnames[rsindex + 1]
 							end
