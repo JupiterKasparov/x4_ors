@@ -6,3 +6,8 @@ To keep things easy and maintainable, the mod consists of the in-game script (MD
 The EXE uses bass.dll to play music, and so it's Windows-only. The LUA script uses FFI to call Windows functions.
 
 The EXE can be produced by compiling its source code with Lazarus/FPC. It's a 64-bit app!
+
+The following content is available from this GitHub repository:
+* 'Rel' directory: the full release. It can also be downloaded from Nexus Mods, in a ZIP.
+* '_player' directory: source code. Use 64-bit Lazarus, to compile the EXE.
+
