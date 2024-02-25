@@ -1,11 +1,16 @@
-# x4_ors
-X4: Foundations - Own Radio Stations
+# X4: Foundations - Own Radio Stations
 
-This is a mod for the X4: Foundations game. Its primary purpose is, to play your favorite music, as if it were playing in some kind of in-game radio station.
-To keep things easy and maintainable, the mod consists of the in-game script (MD + LUA), and a separate playback controller application, which communicates with the in-game LUA script, via shared memory.
-The EXE uses bass.dll to play music, and so it's Windows-only. The LUA script uses FFI to call Windows functions.
+This mod makes it possible for players to listen to their favorite music during gameplay in X4: Foundations.
+Before this mod, the only way (the old-school) to do this was to mute the game, and start Winamp (or similar program) in the background.
+The fully playable mod can be dwonloaded from https://www.nexusmods.com/x4foundations/mods/544
 
-The following content is available from this GitHub repository:
-* 'Rel' directory: the full release. It can also be downloaded from Nexus Mods, in a ZIP.
-* '_player' directory: source code. To compile the EXE, use 64-bit Lazarus/FPC.
+### Pros of using this mod vs the old-school solution
+* In-game happenings affect the music (eg. speech and player state changes)
+* The game doesn't need to be muted
+* Easy music change during gameplay (the mod uses hotkeys, instead of requiring the user to Alt-Tab out of the game)
 
+## Source code
+This repository contains the full source code of the mod.
+* \_\_lua\_\_ directory: contains the the in-game LUA script (same as in the actually playable mod), which manages the Playback Controller Application, keeps the game background music muted, and hooks the X4 Sound Options menu. Windows-only!
+* \_\_md\_\_ directory: contains the the in-game X4: Foundations Mission Director script (same as in the actually playable mod), which triggers the LUA script, to keep the mod operational; and also allows the user to change the key bindings from the Extension Options (SN Mod Support APIs) menu.
+* \_\_player\_\_ directory: contains the Free Pascal source code of the Playback Controller Application, which does the actual music playback. Compile with Lazarus for 64-bit target. Windows-only!
