@@ -41,31 +41,41 @@ type
 
 implementation
 
+var
+  OnlineLoadingList: TThreadList;
+
 procedure InitOnlineStream(obj: Pointer);
 var
-  song: TPlayableAudioTrack absolute obj;
   bassChannel: HCHANNEL;
+  lst: TList;
 begin
   // Load the online stream
-  bassChannel := BASS_StreamCreateURL(PChar(song.FileName), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
+  bassChannel := BASS_StreamCreateURL(PChar(TPlayableAudioTrack(obj).FileName), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
+  lst := OnlineLoadingList.LockList;
   try
-    if (bassChannel = 0) then
+    if (lst.IndexOf(obj) >= 0) then
        begin
-         song._status := ssError;
-         song._errno := BASS_ErrorGetCode;
+         lst.Extract(obj);
+         if (bassChannel = 0) then
+            begin
+              // An error has occurred
+              TPlayableAudioTrack(obj)._status := ssError;
+              TPlayableAudioTrack(obj)._errno := BASS_ErrorGetCode;
+            end
+         else if (TPlayableAudioTrack(obj).Status = ssPlaying) then
+            begin
+              // The track has not been stopped in the meantime. We can continue...
+              TPlayableAudioTrack(obj).bassChannel := bassChannel;
+              BASS_ChannelPlay(TPlayableAudioTrack(obj).bassChannel, BOOL(0));
+              TPlayableAudioTrack(obj).int_SetVolume(TPlayableAudioTrack(obj)._vol);
+            end
+         else
+            BASS_StreamFree(bassChannel); // The track stopped in the meantime. We must not continue...
        end
-    else if (song.Status = ssPlaying) then
-       begin
-         song.bassChannel := bassChannel;
-         BASS_ChannelPlay(song.bassChannel, BOOL(0));
-         song.int_SetVolume(song._vol);
-       end
-    else
-       BASS_StreamFree(bassChannel); // It is possible, that the song is already stopped...
-  except
-    // It is possible, that the song is already done for...
-    if (bassChannel <> 0) then
-       BASS_StreamFree(bassChannel);
+    else if (bassChannel <> 0) then
+       BASS_StreamFree(bassChannel); // The track is already gone
+  finally
+    OnlineLoadingList.UnlockList;
   end;
 
   // Terminate this thread snippet
@@ -101,12 +111,23 @@ end;
 procedure TPlayableAudioTrack.int_SetStatus(st: TSongStatus);
 
           procedure InternalPlayTrack;
+          var
+            lst: TList;
           begin
             if _isonline then
                begin
                  bassChannel := 0;
                  _onlinestopped := false;
-                 TThread.ExecuteInThread(@InitOnlineStream, Pointer(Self), nil);
+                 lst := OnlineLoadingList.LockList;
+                 try
+                   if (lst.IndexOf(Pointer(Self)) < 0) then
+                      begin
+                        lst.Add(Pointer(Self));
+                        TThread.ExecuteInThread(@InitOnlineStream, Pointer(Self), nil);
+                      end;
+                 finally
+                   OnlineLoadingList.UnlockList;
+                 end;
                end
             else
                begin
@@ -260,10 +281,19 @@ begin
 end;
 
 destructor TPlayableAudioTrack.Destroy;
+var
+  lst: TList;
 begin
   int_SetStatus(ssStopped);
   if _isonline then
      begin
+       lst := OnlineLoadingList.LockList;
+       try
+         if (lst.IndexOf(Pointer(Self)) >= 0) then
+            lst.Extract(Pointer(Self));
+       finally
+         OnlineLoadingList.UnlockList;
+       end;
        if (bassChannel <> 0) then
           BASS_StreamFree(bassChannel);
      end
@@ -321,6 +351,7 @@ begin
 end;
 
 initialization
+  OnlineLoadingList := TThreadList.Create;
   BASS_Init(-1, 44100, BASS_DEVICE_NOSPEAKER, 0, nil);
   BASS_SetConfig(BASS_CONFIG_NET_PLAYLIST, 1);
   BASS_SetConfig(BASS_CONFIG_NET_PREBUF_WAIT, 0);
@@ -329,6 +360,7 @@ initialization
 finalization
   BASS_Stop;
   BASS_Free;
+  OnlineLoadingList.Free;
 
 end.
 
