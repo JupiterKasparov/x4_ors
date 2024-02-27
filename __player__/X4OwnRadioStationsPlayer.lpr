@@ -53,7 +53,6 @@ var
   ClosestStationData: TFactionDistanceDataArray;
   KeyBindingChange: TKeyBindChangeStruct;
   Settings: TIniFile;
-  SharedMemHandle, ProgramMutexHandle: HANDLE;
 
 // ********************************
 // HELPERS
@@ -300,20 +299,14 @@ begin
                                 tokenValue := Trim(RightStr(token, Length(token) - tok2));
                                 if TryStrToInt(tokenName, i) and TryStrToInt(tokenValue, j) then
                                    begin
-                                    if (i >= 1) and (i <= KeyBindingCount) then
-                                       begin
-                                         SetLength(keybindchange, Length(keybindchange) + 1);
-                                         keybindchange[High(keybindchange)].KeyIndex := i;
-                                         keybindchange[High(keybindchange)].KeyID := j;
-                                       end
-                                    else
-                                       Log(Format('[READ DATA]: Cannot store Key Binding %d, because it is out of range!', [i]));
+                                    keybindchange[High(keybindchange)].KeyIndex := i;
+                                    keybindchange[High(keybindchange)].KeyID := j;
                                    end
                                 else
-                                   Log(Format('[READ DATA]: Cannot process either the Key Binding Index (''%s'') or the Key Binding Value (''%s'') to int!', [tokenName, tokenValue]));
+                                   Log(Format('[READ DATA]: Cannot convert either the Key Binding Index (''%s'') or the Key Binding Value (''%s'') to int!', [tokenName, tokenValue]));
                              end
                           else
-                             Log(Format('[READ DATA]: Cannot store key binding ''%s'', because it is invalid!', [token]));
+                             Log(Format('[READ DATA]: Cannot process key binding ''%s'', because it is invalid!', [token]));
                        end;
                   until (tok1 <= 0);
 
@@ -470,7 +463,7 @@ begin
   Settings.Free;
 end;
 
-function RunProgram: boolean;
+function RunProgram(sharedMem: HANDLE): boolean;
 var
   i: integer;
   paused: boolean;
@@ -493,61 +486,71 @@ begin
   // Main loop
   while IsGameRunning do
         begin
-          mem := MapViewOfFile(SharedMemHandle, FILE_MAP_ALL_ACCESS, 0, 0, SharedMemSize);
-          case GetGameData(mem, GameStatus, ClosestStationData, KeyBindingChange) of
-                1:
-                  begin
-                    // Check, if the game is in active menu
-                    lasttick := GetTickCount64;
-                    if GameStatus.IsActiveMenu and paused then
-                       begin
-                         paused := false;
-                         for i := 0 to RadioStations.Count - 1 do
-                             RadioStations[i].Status := rsPlaying;
-                       end
-                    else if (not GameStatus.IsActiveMenu) and (not paused) then
-                       begin
-                         paused := true;
-                         for i := 0 to RadioStations.Count - 1 do
-                             RadioStations[i].Status := rsPaused;
-                       end;
-
-                    // Update volume
-                    for i := 0 to RadioStations.Count - 1 do
-                        if (GameStatus.CurrentStationIndex = i) and GameStatus.IsAlive and GameStatus.IsPiloting then
-                           RadioStations[i].Update(@ClosestStationData, ProgramData.MasterLoudness * GameStatus.MusicVolume, ProgramData.LinearVolume)
-                        else
-                           RadioStations[i].Update(nil, 0.0, false);
-                  end;
-                2:
-                  begin
-                    if (GameStatus.CurrentStationIndex >= 0) and (GameStatus.CurrentStationIndex < RadioStations.Count) and (RadioStations[GameStatus.CurrentStationIndex].IsMP3Station) then
-                       RadioStations[GameStatus.CurrentStationIndex].ReplayCurrTrack;
-                  end;
-                3:
-                  begin
-                    if (GameStatus.CurrentStationIndex >= 0) and (GameStatus.CurrentStationIndex < RadioStations.Count) and (RadioStations[GameStatus.CurrentStationIndex].IsMP3Station) then
-                       RadioStations[GameStatus.CurrentStationIndex].SkipNextTrack;
-                  end;
-                4:
-                  begin
-                    Log('[RUN]: The application is now going to reload...');
-                    UnmapViewOfFile(mem);
-                    exit(true); // Result - TRUE: Must reload program after function return
-                  end;
-                5:
-                  begin
-                    for i := 0 to High(KeyBindingChange) do
-                        begin
-                          ProgramData.KeyBindings[KeyBindingChange[i].KeyIndex] := KeyBindingChange[i].KeyID;
-                          WriteIntSetting(Settings, KeyBindingNames[KeyBindingChange[i].KeyIndex], KeyBindingChange[i].KeyID)
-                        end;
-                    SetLength(KeyBindingChange, 0);
-                  end;
-                6:
-                  SendProgramData(mem);
+          mem := MapViewOfFile(sharedMem, FILE_MAP_ALL_ACCESS, 0, 0, SharedMemSize);
+          try
+            case GetGameData(mem, GameStatus, ClosestStationData, KeyBindingChange) of
+                  1:
+                    begin
+                      // Update
+                      lasttick := GetTickCount64;
+                      if GameStatus.IsActiveMenu and paused then
+                         begin
+                           paused := false;
+                           for i := 0 to RadioStations.Count - 1 do
+                               RadioStations[i].Status := rsPlaying;
+                         end
+                      else if (not GameStatus.IsActiveMenu) and (not paused) then
+                         begin
+                           paused := true;
+                           for i := 0 to RadioStations.Count - 1 do
+                               RadioStations[i].Status := rsPaused;
+                         end;
+                      for i := 0 to RadioStations.Count - 1 do
+                          if (GameStatus.CurrentStationIndex = i) and GameStatus.IsAlive and GameStatus.IsPiloting then
+                             RadioStations[i].Update(@ClosestStationData, ProgramData.MasterLoudness * GameStatus.MusicVolume, ProgramData.LinearVolume)
+                          else
+                             RadioStations[i].Update(nil, 0.0, false);
+                    end;
+                  2:
+                    begin
+                      // Replay current MP3
+                      if (GameStatus.CurrentStationIndex >= 0) and (GameStatus.CurrentStationIndex < RadioStations.Count) and (RadioStations[GameStatus.CurrentStationIndex].IsMP3Station) then
+                         RadioStations[GameStatus.CurrentStationIndex].ReplayCurrTrack;
+                    end;
+                  3:
+                    begin
+                      // Skip to next MP3
+                      if (GameStatus.CurrentStationIndex >= 0) and (GameStatus.CurrentStationIndex < RadioStations.Count) and (RadioStations[GameStatus.CurrentStationIndex].IsMP3Station) then
+                         RadioStations[GameStatus.CurrentStationIndex].SkipNextTrack;
+                    end;
+                  4:
+                    begin
+                      // Trigger app reload
+                      Log('[MAIN]: The application is now going to reload...');
+                      exit(true); // Result - TRUE: Must reload program after function return
+                    end;
+                  5:
+                    begin
+                      // Store Key Binding(s)
+                      for i := 0 to High(KeyBindingChange) do
+                          begin
+                            if (KeyBindingChange[i].KeyIndex >= 1) and (KeyBindingChange[i].KeyIndex <= KeyBindingCount) then
+                               begin
+                                 ProgramData.KeyBindings[KeyBindingChange[i].KeyIndex] := KeyBindingChange[i].KeyID;
+                                 WriteIntSetting(Settings, KeyBindingNames[KeyBindingChange[i].KeyIndex], KeyBindingChange[i].KeyID);
+                               end
+                            else
+                               Log(Format('[MAIN]: Cannot store Key Binding %d, because it is out of range!', [KeyBindingChange[i].KeyIndex]));
+                          end;
+                      SetLength(KeyBindingChange, 0);
+                    end;
+                  6:
+                    // Send data to LUA
+                    SendProgramData(mem);
+            end;
+          finally
+            UnmapViewOfFile(mem);
           end;
-          UnmapViewOfFile(mem);
 
           // Pause radio stations, if no heartbeat signal for too long
           if (not paused) and ((GetTickCount64 - lasttick) > programdata.Latency) then
@@ -571,6 +574,7 @@ end;
 var
   i: integer;
   mustRunProgram: boolean;
+  SharedMemHandle, ProgramMutexHandle: HANDLE;
 
 begin
   // ********************************
@@ -606,28 +610,32 @@ begin
               SharedMemHandle := CreateFileMapping(INVALID_HANDLE_VALUE, nil, PAGE_READWRITE, 0, SharedMemSize, PChar(SharedMemName));
               if (SharedMemHandle <> 0) then
                  begin
-                   while mustRunProgram do
-                         try
-                           InitProgram;
+                   try
+                     while mustRunProgram do
                            try
-                             mustRunProgram := RunProgram;
+                             InitProgram;
+                             try
+                               mustRunProgram := RunProgram(SharedMemHandle);
+                             except
+                               mustRunProgram := false;
+                               LogError(ExceptObject, ExceptAddr);
+                               ExitCode := 2;
+                             end;
+                             try
+                               FiniProgram;
+                             except
+                               mustRunProgram := false;
+                               LogError(ExceptObject, ExceptAddr);
+                               ExitCode := 3;
+                             end;
                            except
                              mustRunProgram := false;
                              LogError(ExceptObject, ExceptAddr);
-                             ExitCode := 2;
+                             ExitCode := 1;
                            end;
-                           try
-                             FiniProgram;
-                           except
-                             mustRunProgram := false;
-                             LogError(ExceptObject, ExceptAddr);
-                             ExitCode := 3;
-                           end;
-                         except
-                           mustRunProgram := false;
-                           LogError(ExceptObject, ExceptAddr);
-                           ExitCode := 1;
-                         end;
+                   finally
+                     CloseHandle(SharedMemHandle);
+                   end;
                  end
               else
                  begin
@@ -639,7 +647,10 @@ begin
             end
           end
        else
-          MessageBox(0, 'This application must have a single instance only!', PChar(ProgramPopupWindowName), MB_OK + MB_ICONERROR);
+          begin
+            CloseHandle(ProgramMutexHandle);
+            MessageBox(0, 'This application must have a single instance only!', PChar(ProgramPopupWindowName), MB_OK + MB_ICONERROR);
+          end;
      end;
 end.
 

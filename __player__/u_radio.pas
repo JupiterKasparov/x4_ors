@@ -5,7 +5,7 @@ unit u_radio;
 interface
 
 uses
-  Classes, SysUtils, Math, fgl, u_utils, u_logger, u_song;
+  Classes, SysUtils, Math, fgl, u_utils, u_song;
 
 type
   TRadioStatus = (rsPaused, rsPlaying, rsError);
@@ -178,10 +178,7 @@ begin
         if (track.Status <> ssError) then
            _tracks.Add(track)
         else
-           begin
-             Log(Format('[INIT]: Failed to load MP3 track file ''%s'', error: ''%s''!', [track.FileName, track.GetErrorInfo]));
-             track.Free;
-           end;
+           track.Free;
       end;
   Process;
 end;
@@ -214,10 +211,7 @@ begin
             Process;
           end
        else
-          begin
-            Log(Format('[INIT]: Failed to load audio file ''%s'', error: ''%s''!', [track.FileName, track.GetErrorInfo]));
-            track.Free;
-          end;
+          track.Free;
      end;
 end;
 
@@ -283,19 +277,11 @@ begin
                          _mp3index := 0;
                       _tracks[_mp3index].Volume := int_GetSlotFinalVolume(0);
                       _tracks[_mp3index].Status := ssPlaying;
-
-                      // If an MP3 has errored out (cannot play), we log the error, for the first time
-                      if (_tracks[_mp3index].Status = ssError) then
-                         Log(Format('[PLAYBACK]: Failed to start MP3 track file ''%s'', error: ''%s''!', [_tracks[_mp3index].FileName, _tracks[_mp3index].GetErrorInfo]));
                     end
                  else if (_tracks[_mp3index].Status = ssPaused) then
                     begin
                       _tracks[_mp3index].Volume := int_GetSlotFinalVolume(0);
                       _tracks[_mp3index].Status := ssPlaying;
-
-                      // If an MP3 has errored out (cannot resume), we log the error, for the first time
-                      if (_tracks[_mp3index].Status = ssError) then
-                         Log(Format('[PLAYBACK]: Failed to resume MP3 track file ''%s'', error: ''%s''!', [_tracks[_mp3index].FileName, _tracks[_mp3index].GetErrorInfo]));
                     end
                  else
                     _tracks[_mp3index].Volume := int_GetSlotFinalVolume(0);
@@ -309,13 +295,7 @@ begin
             for i := 0 to _tracks.Count - 1 do
                 begin
                   if (_tracks[i].Status in [ssPaused, ssStopped]) then
-                     begin
-                       _tracks[i].Status := ssPlaying;
-
-                       // If an MP3 has errored out (cannot play), we log the error, for the first time
-                      if (_tracks[i].Status = ssError) then
-                         Log(Format('[PLAYBACK]: Failed to start or resume audio file ''%s'', error: ''%s''!', [_tracks[i].FileName, _tracks[i].GetErrorInfo]));
-                     end;
+                     _tracks[i].Status := ssPlaying;
                   _tracks[i].Volume := int_GetSlotFinalVolume(i);
                 end;
           end;

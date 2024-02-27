@@ -50,7 +50,7 @@ var
   lst: TList;
 begin
   // Load the online stream
-  bassChannel := BASS_StreamCreateURL(PChar(TPlayableAudioTrack(obj).FileName), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
+  bassChannel := BASS_StreamCreateURL(PChar(TPlayableAudioTrack(obj)._filename), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
   lst := OnlineLoadingList.LockList;
   try
     if (lst.IndexOf(obj) >= 0) then
@@ -61,6 +61,7 @@ begin
               // An error has occurred
               TPlayableAudioTrack(obj)._status := ssError;
               TPlayableAudioTrack(obj)._errno := BASS_ErrorGetCode;
+              Log(Format('[PLAYBACK]: Failed to connect to online stream ''%s'', error: ''%s''!', [TPlayableAudioTrack(obj)._filename, TPlayableAudioTrack(obj).GetErrorInfo]));
             end
          else if (TPlayableAudioTrack(obj).Status = ssPlaying) then
             begin
@@ -136,6 +137,7 @@ procedure TPlayableAudioTrack.int_SetStatus(st: TSongStatus);
                     begin
                       _status := ssError;
                       _errno := BASS_ErrorGetCode;
+                      Log(Format('[PLAYBACK]: Failed to play track ''%s'', error: ''%s''!', [_filename, GetErrorInfo]));
                     end
                  else
                     BASS_ChannelPlay(bassChannel, BOOL(1));
@@ -273,6 +275,7 @@ begin
                begin
                  _status := ssError;
                  _errno := BASS_ErrorGetCode;
+                 Log(Format('[PLAYBACK]: Failed to load track ''%s'', error: ''%s''!', [_filename, GetErrorInfo]));
                end;
           end
        else
