@@ -299,6 +299,7 @@ begin
                                 tokenValue := Trim(RightStr(token, Length(token) - tok2));
                                 if TryStrToInt(tokenName, i) and TryStrToInt(tokenValue, j) then
                                    begin
+                                    SetLength(keybindchange, Length(keybindchange) + 1);
                                     keybindchange[High(keybindchange)].KeyIndex := i;
                                     keybindchange[High(keybindchange)].KeyID := j;
                                    end
@@ -605,7 +606,7 @@ begin
        ProgramMutexHandle := OpenMutex(MUTEX_ALL_ACCESS, BOOL(0), PChar(ProgramMutexName));
        if (ProgramMutexHandle = 0) then
           begin
-            ProgramMutexHandle := CreateMutex(nil, BOOL(0), PChar(ProgramMutexName));
+            ProgramMutexHandle := CreateMutex(nil, BOOL(1), PChar(ProgramMutexName));
             try
               SharedMemHandle := CreateFileMapping(INVALID_HANDLE_VALUE, nil, PAGE_READWRITE, 0, SharedMemSize, PChar(SharedMemName));
               if (SharedMemHandle <> 0) then
@@ -644,6 +645,7 @@ begin
                  end;
             finally
               ReleaseMutex(ProgramMutexHandle);
+              CloseHandle(ProgramMutexHandle);
             end
           end
        else
