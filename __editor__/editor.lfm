@@ -1,0 +1,723 @@
+object FrmEditor: TFrmEditor
+  Left = 1057
+  Height = 480
+  Top = 134
+  Width = 500
+  BorderIcons = [biSystemMenu, biMaximize]
+  BorderStyle = bsToolWindow
+  Caption = 'X4 ORS Editor'
+  ClientHeight = 480
+  ClientWidth = 500
+  OnCloseQuery = ev_CanClose
+  OnCreate = ev_Init
+  OnDestroy = ev_Free
+  OnKeyUp = ev_KeyPress
+  OnPaint = ev_Draw
+  Position = poDesktopCenter
+  ShowHint = True
+  LCLVersion = '1.6.4.0'
+  object PgEditorPages: TPageControl
+    Left = 0
+    Height = 400
+    Top = 0
+    Width = 400
+    ActivePage = PgEditGlobal
+    MultiLine = True
+    TabIndex = 0
+    TabOrder = 0
+    Options = [nboMultiLine, nboHidePageListPopup]
+    object PgEditGlobal: TTabSheet
+      Caption = 'Global settings'
+      ClientHeight = 352
+      ClientWidth = 392
+      object LbgNoOfStations: TLabel
+        Left = 0
+        Height = 25
+        Top = 8
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Number of radio stations:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvNoOfStations: TSpinEdit
+        Left = 224
+        Height = 25
+        Hint = 'The dedicated MP3 player radio station does not count towards this value!'
+        Top = 8
+        Width = 160
+        AutoSize = False
+        MaxValue = 256
+        OnChange = ev_Change_gNoOfStations
+        TabOrder = 0
+      end
+      object LbgLatency: TLabel
+        Left = 0
+        Height = 25
+        Top = 40
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Maximum latency (ms):'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvLatency: TSpinEdit
+        Left = 224
+        Height = 25
+        Top = 40
+        Width = 160
+        AutoSize = False
+        MaxValue = 5000
+        MinValue = 10
+        OnChange = ev_Change_gLatency
+        TabOrder = 1
+        Value = 10
+      end
+      object LbgRandomizeTracks: TLabel
+        Left = 0
+        Height = 25
+        Top = 72
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Randomize tracks upon initialization:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvRandomizeTracks: TComboBox
+        Left = 224
+        Height = 23
+        Top = 72
+        Width = 160
+        AutoSize = False
+        ItemHeight = 15
+        ItemIndex = 0
+        Items.Strings = (
+          'No'
+          'Yes'
+        )
+        OnChange = ev_Change_gRandomizeTracks
+        Style = csDropDownList
+        TabOrder = 2
+        Text = 'No'
+      end
+      object LbgOnlineStreams: TLabel
+        Left = 0
+        Height = 25
+        Top = 104
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Enable on-line radio stations:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvOnlineStreams: TComboBox
+        Left = 224
+        Height = 23
+        Top = 104
+        Width = 160
+        AutoSize = False
+        ItemHeight = 15
+        ItemIndex = 1
+        Items.Strings = (
+          'No'
+          'Yes'
+        )
+        OnChange = ev_Change_gOnlineStreams
+        Style = csDropDownList
+        TabOrder = 3
+        Text = 'Yes'
+      end
+      object LbgLinearVolume: TLabel
+        Left = 0
+        Height = 25
+        Top = 136
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Use linear volume scale:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvLinearVolume: TComboBox
+        Left = 224
+        Height = 23
+        Top = 136
+        Width = 160
+        AutoSize = False
+        ItemHeight = 15
+        ItemIndex = 0
+        Items.Strings = (
+          'No'
+          'Yes'
+        )
+        OnChange = ev_Change_gLinearVolume
+        Style = csDropDownList
+        TabOrder = 4
+        Text = 'No'
+      end
+      object LbgLoudnessFactor: TLabel
+        Left = 0
+        Height = 25
+        Top = 168
+        Width = 216
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Master loudness:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object GvLoudnessFactor: TTrackBar
+        Left = 224
+        Height = 25
+        Top = 168
+        Width = 160
+        Max = 100
+        OnChange = ev_Change_gLoudnessFactor
+        Position = 100
+        TabOrder = 5
+      end
+    end
+    object PgEditKeys: TTabSheet
+      Caption = 'Key bindings'
+      ClientHeight = 272
+      ClientWidth = 392
+      object LbkModifier1: TLabel
+        Left = -1
+        Height = 25
+        Top = 8
+        Width = 130
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Modifier Key 1:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkModifier1: TButton
+        Left = 136
+        Height = 25
+        Top = 8
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 0
+      end
+      object BtkvModifier1: TLabel
+        Left = 216
+        Height = 25
+        Top = 8
+        Width = 112
+        AutoSize = False
+        Caption = 'BtkvModifier1'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkvModifier2: TLabel
+        Left = 216
+        Height = 25
+        Top = 40
+        Width = 112
+        AutoSize = False
+        Caption = 'LbkvModifier2'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkModifier2: TButton
+        Left = 136
+        Height = 25
+        Top = 40
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 1
+      end
+      object LbkModifier2: TLabel
+        Left = 0
+        Height = 25
+        Top = 40
+        Width = 129
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Modifier key 2:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkPrevStation: TLabel
+        Left = -4
+        Height = 25
+        Top = 72
+        Width = 133
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Previous Radio Station:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkPrevStation: TButton
+        Left = 136
+        Height = 25
+        Top = 72
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 2
+      end
+      object LbkvPrevStation: TLabel
+        Left = 216
+        Height = 25
+        Top = 72
+        Width = 112
+        AutoSize = False
+        Caption = 'LbkvPrevStation'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkNextStation: TLabel
+        Left = -4
+        Height = 25
+        Top = 104
+        Width = 133
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Next Radio Station:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkNextStation: TButton
+        Left = 136
+        Height = 25
+        Top = 104
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 3
+      end
+      object LbkvNextStation: TLabel
+        Left = 216
+        Height = 25
+        Top = 104
+        Width = 111
+        AutoSize = False
+        Caption = 'LbkvNextStation'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkReplayMP3: TLabel
+        Left = -4
+        Height = 25
+        Top = 136
+        Width = 133
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Replay current MP3:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkReplayMP3: TButton
+        Left = 136
+        Height = 25
+        Top = 136
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 4
+      end
+      object LbkvReplayMP3: TLabel
+        Left = 217
+        Height = 25
+        Top = 136
+        Width = 110
+        AutoSize = False
+        Caption = 'LbkvReplayMP3'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkSkipMP3: TLabel
+        Left = 0
+        Height = 25
+        Top = 168
+        Width = 129
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Skip current MP3:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkSkipMP3: TButton
+        Left = 136
+        Height = 25
+        Top = 168
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 5
+      end
+      object LbkvSkipMP3: TLabel
+        Left = 217
+        Height = 25
+        Top = 168
+        Width = 110
+        AutoSize = False
+        Caption = 'LbkvSkipMP3'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object LbkReloadMod: TLabel
+        Left = -3
+        Height = 25
+        Top = 200
+        Width = 132
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Reload mod:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object BtkReloadMod: TButton
+        Left = 136
+        Height = 25
+        Top = 200
+        Width = 75
+        Caption = 'Edit'
+        OnClick = ev_Change_Keys
+        TabOrder = 6
+      end
+      object LbkvReloadMod: TLabel
+        Left = 217
+        Height = 25
+        Top = 200
+        Width = 110
+        AutoSize = False
+        Caption = 'LbkvReloadMod'
+        Layout = tlCenter
+        ParentColor = False
+      end
+    end
+    object PgEditRs: TTabSheet
+      Caption = 'Radio station editor'
+      ClientHeight = 352
+      ClientWidth = 392
+      object LbrSelectStation: TLabel
+        Left = 8
+        Height = 25
+        Top = 16
+        Width = 160
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Currently edited station:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object RvSelectStation: TComboBox
+        Left = 176
+        Height = 23
+        Top = 16
+        Width = 160
+        AutoSize = False
+        ItemHeight = 15
+        OnChange = ev_SelectStation
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object GbrStationProps: TGroupBox
+        Left = 0
+        Height = 305
+        Top = 48
+        Width = 392
+        Caption = 'Radio station properties'
+        ClientHeight = 285
+        ClientWidth = 388
+        TabOrder = 1
+        object LbrSlotCount: TLabel
+          Left = 8
+          Height = 25
+          Top = 0
+          Width = 160
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Slot count:'
+          Layout = tlCenter
+          ParentColor = False
+        end
+        object RvSlotCount: TSpinEdit
+          Left = 176
+          Height = 25
+          Top = 0
+          Width = 160
+          AutoSize = False
+          MaxValue = 64
+          OnChange = ev_Change_rSlotCount
+          TabOrder = 0
+        end
+        object LbrMasterLoudnessFactor: TLabel
+          Left = 8
+          Height = 25
+          Top = 32
+          Width = 160
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Loudness factor:'
+          Layout = tlCenter
+          ParentColor = False
+        end
+        object RvMasterLoudnessFactor: TTrackBar
+          Left = 176
+          Height = 25
+          Top = 32
+          Width = 160
+          Max = 100
+          OnChange = ev_Change_rLoudnessFactor
+          Position = 0
+          TabOrder = 1
+        end
+        object LbrName: TLabel
+          Left = 0
+          Height = 25
+          Top = 64
+          Width = 168
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Radio station name:'
+          Layout = tlCenter
+          ParentColor = False
+        end
+        object RvName: TEdit
+          Left = 176
+          Height = 25
+          Top = 64
+          Width = 160
+          AutoSize = False
+          OnChange = ev_Change_rName
+          TabOrder = 2
+          Text = '?Unnamed Station?'
+        end
+        object RvSelectSlot: TComboBox
+          Left = 176
+          Height = 23
+          Top = 96
+          Width = 160
+          AutoSize = False
+          ItemHeight = 15
+          OnChange = ev_SelectSlot
+          Style = csDropDownList
+          TabOrder = 3
+        end
+        object LbrSelectSlot: TLabel
+          Left = 8
+          Height = 25
+          Top = 96
+          Width = 160
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = 'Currently edited slot:'
+          Layout = tlCenter
+          ParentColor = False
+        end
+        object GbrSlotProps: TGroupBox
+          Left = 4
+          Height = 152
+          Top = 128
+          Width = 381
+          Caption = 'Slot properties'
+          ClientHeight = 132
+          ClientWidth = 377
+          TabOrder = 4
+          object LbrSlotFileName: TLabel
+            Left = 8
+            Height = 25
+            Top = 0
+            Width = 168
+            Alignment = taRightJustify
+            AutoSize = False
+            Caption = 'File name or internet address:'
+            Layout = tlCenter
+            ParentColor = False
+          end
+          object RvSlotFileName: TEdit
+            Left = 184
+            Height = 25
+            Top = 0
+            Width = 184
+            AutoSize = False
+            OnChange = ev_Change_rSlotFileName
+            TabOrder = 0
+          end
+          object LbrSlotOwnerList: TLabel
+            Left = 8
+            Height = 25
+            Top = 32
+            Width = 168
+            Alignment = taRightJustify
+            AutoSize = False
+            Caption = 'Owner factions:'
+            Layout = tlCenter
+            ParentColor = False
+          end
+          object RvSlotOwnerList: TEdit
+            Left = 184
+            Height = 25
+            Hint = 'Comma-separated list of technical faction names'
+            Top = 32
+            Width = 184
+            AutoSize = False
+            OnChange = ev_Change_rSlotOwnerList
+            TabOrder = 1
+          end
+          object PrSlotOnlyProps: TPanel
+            Left = 0
+            Height = 64
+            Top = 68
+            Width = 377
+            Align = alBottom
+            BevelOuter = bvNone
+            ClientHeight = 64
+            ClientWidth = 377
+            TabOrder = 2
+            object LbrSlotDampeningFactor: TLabel
+              Left = 8
+              Height = 25
+              Top = 32
+              Width = 168
+              Alignment = taRightJustify
+              AutoSize = False
+              Caption = 'Dampening factor:'
+              Layout = tlCenter
+              ParentColor = False
+            end
+            object LbrSlotLoudnessFactor: TLabel
+              Left = 8
+              Height = 25
+              Top = 0
+              Width = 168
+              Alignment = taRightJustify
+              AutoSize = False
+              Caption = 'Loudness factor:'
+              Layout = tlCenter
+              ParentColor = False
+            end
+            object RvSlotLoudnessFactor: TTrackBar
+              Left = 184
+              Height = 25
+              Top = 0
+              Width = 184
+              Max = 100
+              OnChange = ev_Change_rSlotLoudnessFactor
+              Position = 0
+              TabOrder = 0
+            end
+            object RvSlotDampeningFactor: TTrackBar
+              Left = 184
+              Height = 25
+              Top = 32
+              Width = 184
+              Max = 100
+              OnChange = ev_Change_rSlotDampeningFactor
+              Position = 100
+              TabOrder = 1
+            end
+          end
+        end
+      end
+    end
+    object PgEditMP3: TTabSheet
+      Caption = 'MP3 player settings'
+      ClientHeight = 272
+      ClientWidth = 392
+      object LbmEnable: TLabel
+        Left = 0
+        Height = 25
+        Top = 8
+        Width = 196
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Enable MP3 player radio station:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object MvEnable: TComboBox
+        Left = 208
+        Height = 23
+        Top = 8
+        Width = 160
+        AutoSize = False
+        ItemHeight = 15
+        ItemIndex = 0
+        Items.Strings = (
+          'No'
+          'Yes'
+        )
+        OnChange = ev_Change_mEnable
+        Style = csDropDownList
+        TabOrder = 0
+        Text = 'No'
+      end
+      object LbmLoudnessFactor: TLabel
+        Left = 0
+        Height = 25
+        Top = 40
+        Width = 196
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Loudness factor:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object MvLoudnessFactor: TTrackBar
+        Left = 208
+        Height = 25
+        Top = 40
+        Width = 160
+        Max = 100
+        OnChange = ev_Change_mLoudnessFactor
+        Position = 0
+        TabOrder = 1
+      end
+      object LbmName: TLabel
+        Left = 0
+        Height = 25
+        Top = 72
+        Width = 196
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = 'Radio station name:'
+        Layout = tlCenter
+        ParentColor = False
+      end
+      object MvName: TEdit
+        Left = 208
+        Height = 25
+        Top = 72
+        Width = 160
+        AutoSize = False
+        OnChange = ev_Change_mName
+        TabOrder = 2
+        Text = '?Unnamed MP3 Station?'
+      end
+    end
+  end
+  object BtSelectFile: TButton
+    Left = 8
+    Height = 25
+    Top = 408
+    Width = 160
+    Caption = 'Load X4 ORS ''settings.ini'''
+    OnClick = ev_SelectFile
+    TabOrder = 1
+  end
+  object TmrUpdate: TTimer
+    Interval = 250
+    OnTimer = ev_Update
+    left = 416
+    top = 8
+  end
+  object DlgSelectFile: TOpenDialog
+    Title = 'Select an INI file to edit'
+    Filter = 'X4 ORS settings INI|settings.ini'
+    Options = [ofReadOnly, ofFileMustExist, ofEnableSizing, ofDontAddToRecent]
+    left = 416
+    top = 64
+  end
+end
