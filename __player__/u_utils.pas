@@ -5,7 +5,7 @@ unit u_utils;
 interface
 
 uses
-  SysUtils, IniFiles, strutils;
+  Classes, SysUtils, IniFiles, strutils;
 
 function IsNetFile(fn: string): boolean;
 function ReadStringSetting(ini: TIniFile; name, def: string): string;
@@ -14,6 +14,7 @@ function ReadFloatSetting(ini: TIniFile; name: string; def: double): double;
 procedure WriteStringSetting(ini: TIniFile; name, value: string);
 procedure WriteIntSetting(ini: TIniFile; name: string; value: integer);
 procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
+procedure ShuffleList(lst: TStrings);
 
 var
   X4OrsFormatSettings: TFormatSettings;
@@ -94,6 +95,24 @@ end;
 procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
 begin
   WriteStringSetting(ini, name, FloatToStr(value, X4OrsFormatSettings));
+end;
+
+procedure ShuffleList(lst: TStrings);
+var
+  i, r: integer;
+  temp: string;
+begin
+  if (lst.Count > 1) then
+     for i := 0 to lst.Count - 1 do
+         begin
+           r := random(lst.Count);
+           if (r <> i) then
+              begin
+                temp := lst[i];
+                lst[i] := lst[r];
+                lst[r] := temp;
+              end;
+         end;
 end;
 
 initialization

@@ -19,9 +19,9 @@
     </i18n>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MinorVersionNr Value="18"/>
-      <RevisionNr Value="3"/>
-      <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2024" ProductVersion=""/>
+      <MinorVersionNr Value="19"/>
+      <RevisionNr Value="1"/>
+      <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2025" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
@@ -40,7 +40,7 @@
         <PackageName Value="LCLBase"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="5">
+    <Units Count="6">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -61,6 +61,10 @@
         <Filename Value="u_utils.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="u_manager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit5>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

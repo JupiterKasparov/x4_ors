@@ -4,43 +4,50 @@
     <PathDelim Value="\"/>
     <Version Value="10"/>
     <BuildModes Active="Default"/>
-    <Units Count="5">
+    <Units Count="6">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <UsageCount Value="49"/>
+        <UsageCount Value="82"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="u_radio.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <UsageCount Value="49"/>
+        <UsageCount Value="82"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="u_song.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
-        <UsageCount Value="49"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="82"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="u_logger.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <UsageCount Value="49"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="82"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="u_utils.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <UsageCount Value="49"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="82"/>
         <Loaded Value="True"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="u_manager.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="53"/>
+        <Loaded Value="True"/>
+      </Unit5>
     </Units>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory HistoryIndex="-1" />
   </ProjectSession>
 </CONFIG>

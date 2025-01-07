@@ -61,7 +61,7 @@ begin
               // An error has occurred
               TPlayableAudioTrack(obj)._status := ssError;
               TPlayableAudioTrack(obj)._errno := BASS_ErrorGetCode;
-              Log(Format('[PLAYBACK]: Failed to connect to online stream ''%s'', error: ''%s''!', [TPlayableAudioTrack(obj)._filename, TPlayableAudioTrack(obj).GetErrorInfo]));
+              LogError(Format('Failed to connect to online stream ''%s''! Error: %s', [TPlayableAudioTrack(obj)._filename, TPlayableAudioTrack(obj).GetErrorInfo]));
             end
          else if (TPlayableAudioTrack(obj).Status = ssPlaying) then
             begin
@@ -137,7 +137,7 @@ procedure TPlayableAudioTrack.int_SetStatus(st: TSongStatus);
                     begin
                       _status := ssError;
                       _errno := BASS_ErrorGetCode;
-                      Log(Format('[PLAYBACK]: Failed to play track ''%s'', error: ''%s''!', [_filename, GetErrorInfo]));
+                      LogError(Format('Failed to play ''%s''! Error: %s', [_filename, GetErrorInfo]));
                     end
                  else
                     BASS_ChannelPlay(bassChannel, BOOL(1));
@@ -275,7 +275,7 @@ begin
                begin
                  _status := ssError;
                  _errno := BASS_ErrorGetCode;
-                 Log(Format('[PLAYBACK]: Failed to load track ''%s'', error: ''%s''!', [_filename, GetErrorInfo]));
+                 LogError(Format('Failed to play ''%s''! Error: %s', [_filename, GetErrorInfo]));
                end;
           end
        else
