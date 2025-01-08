@@ -5,7 +5,7 @@ unit u_song;
 interface
 
 uses
-  Classes, SysUtils, BASS, FileUtil, u_utils, fgl, u_logger;
+  Classes, SysUtils, BASS, u_utils, fgl, u_logger;
 
 type
   TSongStatus = (ssNone, ssStopped, ssPaused, ssPlaying, ssError);

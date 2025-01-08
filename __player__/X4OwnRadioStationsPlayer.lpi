@@ -21,6 +21,7 @@
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="19"/>
       <RevisionNr Value="1"/>
+      <BuildNr Value="1"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2025" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">
@@ -35,11 +36,6 @@
         <CommandLineParams Value="-nolog"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="1">
-      <Item1>
-        <PackageName Value="LCLBase"/>
-      </Item1>
-    </RequiredPackages>
     <Units Count="6">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>

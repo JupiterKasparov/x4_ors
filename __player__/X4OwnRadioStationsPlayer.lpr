@@ -6,9 +6,9 @@ program X4OwnRadioStationsPlayer;
 {$PACKRECORDS C}
 
 uses
-    Windows, SysUtils, Classes, ctypes,
+    Windows, SysUtils, Classes,
     Math, IniFiles, strutils,
-    u_logger, u_song, u_radio, u_utils, u_manager;
+    u_logger, u_radio, u_utils, u_manager;
 
 const
   ProgramMutexName: string = 'jupiter_x4_ors__program_instance';
@@ -327,7 +327,7 @@ begin
               if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName)) then
                  Log('INIT', Format('Radio station file ''%s'' does not exist!', [slotFileName]))
               else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
-                 Log('INIT', Format('[INIT]: Ignoring online stream ''%s''...', [slotFileName]))
+                 Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
               else
                  begin
                    // Multi-owner system

@@ -48,6 +48,10 @@
         <Loaded Value="True"/>
       </Unit5>
     </Units>
-    <JumpHistory HistoryIndex="-1" />
+    <JumpHistory Count="1">
+      <Position1>
+        <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
+      </Position1>
+    </JumpHistory>
   </ProjectSession>
 </CONFIG>
