@@ -99,7 +99,7 @@ var
   answer: string;
   i: integer;
 begin
-  answer := answerType + answerText;
+  answer := answerType + #10 + answerText;
 
   // This construct will copy the answer to the memory backwards, so the LUA script won't try to access the data until it's fully copied
   ZeroMemory(mem, Length(answer) + 1);

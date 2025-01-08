@@ -36,6 +36,11 @@
         <CommandLineParams Value="-nolog"/>
       </local>
     </RunParams>
+    <RequiredPackages Count="1">
+      <Item1>
+        <PackageName Value="LazUtils"/>
+      </Item1>
+    </RequiredPackages>
     <Units Count="6">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>

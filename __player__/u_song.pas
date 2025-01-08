@@ -5,7 +5,7 @@ unit u_song;
 interface
 
 uses
-  Classes, SysUtils, BASS, u_utils, fgl, u_logger;
+  Classes, SysUtils, FileUtil, BASS, u_utils, fgl, u_logger;
 
 type
   TSongStatus = (ssNone, ssStopped, ssPaused, ssPlaying, ssError);
@@ -265,11 +265,11 @@ begin
               try
                 _dummystream.LoadFromFile(_filename);
                 bassSample := BASS_SampleLoad(BOOL(1), _dummystream.Memory, 0, _dummystream.Size, 1, 0);
-              except
-                bassSample := 0;
+              finally
+                _dummystream.Free;
               end;
-            finally
-              _dummystream.Free;
+            except
+              bassSample := 0;
             end;
             if (bassSample = 0) then
                begin
