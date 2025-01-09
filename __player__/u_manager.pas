@@ -85,7 +85,8 @@ begin
 
   // Do process
   locvol := _volume;
-  locvol := (2 * locvol) - (locvol * locvol);
+  if _linearvolume then
+     locvol := (2 * locvol) - (locvol * locvol);
   for i := 0 to _stations.Count - 1 do
       begin
         if (_rsindex <> i) then
