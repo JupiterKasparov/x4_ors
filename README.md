@@ -11,6 +11,6 @@ The fully playable mod can be dwonloaded from https://www.nexusmods.com/x4founda
 
 ## Source code
 This repository only contains the source code of the EXE applications. The in-game scripts can be found within the mod itself, in plain text format.
-* \_\dll\_\_ directory: contains the Free Pascal source code of the X4 ORS Lua Interface DLL. Windows-only! This is necessary, because the in-game LUA engine now blacklists WinAPI FFI calls!
+* \_\_dll\_\_ directory: contains the Free Pascal source code of the X4 ORS Lua Interface DLL. Windows-only! This is necessary, because the in-game LUA engine now blacklists WinAPI FFI calls!
 * \_\_editor\_\_ directory: contains the Free Pascal source code of the X4 ORS Editor. Compile with Lazarus. Windows-only!
 * \_\_player\_\_ directory: contains the Free Pascal source code of the Playback Controller Application, which does the actual music playback. Compile with Lazarus for 64-bit target. Windows-only!
