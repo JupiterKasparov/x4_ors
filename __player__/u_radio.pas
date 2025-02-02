@@ -314,7 +314,7 @@ begin
                end
             else if (_slots[0].Tracks[_mp3index].Status = ssPaused) then
                _slots[0].Tracks[_mp3index].Status := ssPlaying;
-            _slots[0].Tracks[_mp3index].Volume := _volume;
+            _slots[0].Tracks[_mp3index].Volume := _volume * _mastervol;
             for i := 0 to _slots[0].Tracks.Count - 1 do
                 if (i <> _mp3index) then
                    _slots[0].Tracks[i].Status := ssStopped;
@@ -326,7 +326,7 @@ begin
                    begin
                      if (_slots[i].Tracks[0].Status in [ssPaused, ssStopped]) then
                         _slots[i].Tracks[0].Status := ssPlaying;
-                     _slots[i].Tracks[0].Volume := int_GetSlotCalculatedVolume(i);
+                     _slots[i].Tracks[0].Volume := int_GetSlotCalculatedVolume(i) * _mastervol;
                    end;
           end;
      end

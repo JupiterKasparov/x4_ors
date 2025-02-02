@@ -9,20 +9,10 @@
         <Filename Value="X4_ORS.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="88"/>
-        <CursorPos X="130" Y="103"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit0>
     </Units>
-    <JumpHistory Count="2" HistoryIndex="1">
-      <Position1>
-        <Filename Value="X4_ORS.lpr"/>
-        <Caret Line="22" Column="44" TopLine="5"/>
-      </Position1>
-      <Position2>
-        <Filename Value="X4_ORS.lpr"/>
-      </Position2>
-    </JumpHistory>
+    <JumpHistory HistoryIndex="-1"/>
   </ProjectSession>
 </CONFIG>

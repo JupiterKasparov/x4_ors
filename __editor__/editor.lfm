@@ -568,25 +568,14 @@ object FrmEditor: TFrmEditor
           end
           object PrSlotOnlyProps: TPanel
             Left = 0
-            Height = 64
-            Top = 68
+            Height = 32
+            Top = 100
             Width = 377
             Align = alBottom
             BevelOuter = bvNone
-            ClientHeight = 64
+            ClientHeight = 32
             ClientWidth = 377
             TabOrder = 2
-            object LbrSlotDampeningFactor: TLabel
-              Left = 8
-              Height = 25
-              Top = 32
-              Width = 168
-              Alignment = taRightJustify
-              AutoSize = False
-              Caption = 'Dampening factor:'
-              Layout = tlCenter
-              ParentColor = False
-            end
             object LbrSlotLoudnessFactor: TLabel
               Left = 8
               Height = 25
@@ -608,16 +597,27 @@ object FrmEditor: TFrmEditor
               Position = 0
               TabOrder = 0
             end
-            object RvSlotDampeningFactor: TTrackBar
-              Left = 184
-              Height = 25
-              Top = 32
-              Width = 184
-              Max = 100
-              OnChange = ev_Change_rSlotDampeningFactor
-              Position = 100
-              TabOrder = 1
-            end
+          end
+          object LbrSlotDampeningFactor: TLabel
+            Left = 8
+            Height = 25
+            Top = 64
+            Width = 168
+            Alignment = taRightJustify
+            AutoSize = False
+            Caption = 'Dampening factor:'
+            Layout = tlCenter
+            ParentColor = False
+          end
+          object RvSlotDampeningFactor: TTrackBar
+            Left = 184
+            Height = 25
+            Top = 64
+            Width = 184
+            Max = 100
+            OnChange = ev_Change_rSlotDampeningFactor
+            Position = 100
+            TabOrder = 3
           end
         end
       end

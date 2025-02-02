@@ -21,6 +21,7 @@
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="19"/>
       <RevisionNr Value="3"/>
+      <BuildNr Value="1"/>
       <StringTable FileDescription="X4_ORS Playback Controller Interface Lua DLL" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">

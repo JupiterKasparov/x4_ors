@@ -225,6 +225,8 @@ begin
                 if settings.SectionExists(section) then
                    settings.EraseSection(section);
               end;
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
        exit;
@@ -393,6 +395,8 @@ begin
           settings.WriteFloat(section, 'MasterLoudnessFactor', RvMasterLoudnessFactor.Position / 100.0)
        else
           settings.WriteFloat(section, 'LoudnessFactor', RvMasterLoudnessFactor.Position / 100.0);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -406,6 +410,8 @@ begin
      try
        section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
        settings.WriteString(section, 'RadioText', RvName.Text);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -431,6 +437,7 @@ begin
             settings.WriteString(section, 'Owner', settings.ReadString(section, 'SlotOwner_1', ''));
             settings.DeleteKey(section, 'SlotOwner_1');
             settings.DeleteKey(section, 'SlotLoudnessFactor_1');
+            settings.WriteFloat(section, 'DampeningFactor', settings.ReadFloat(section, 'SlotDampeningFactor_1', 1.0));
             settings.DeleteKey(section, 'SlotDampeningFactor_1');
           end
        else if (RvSlotCount.Value > 0) and (slotcount = 0) then
@@ -443,7 +450,7 @@ begin
             settings.WriteString(section, 'SlotOwner_1', settings.ReadString(section, 'Owner', ''));
             settings.DeleteKey(section, 'Owner');
             settings.WriteFloat(section, 'SlotLoudnessFactor_1', 1.0);
-            settings.WriteFloat(section, 'SlotDampeningFactor_1', 1.0);
+            settings.WriteFloat(section, 'SlotDampeningFactor_1', settings.ReadFloat(section, 'DampeningFactor', 1.0));
           end;
        if (RvSlotCount.Value < slotcount) then
           for i := RvSlotCount.Value + 1 to slotcount do
@@ -457,6 +464,8 @@ begin
                 key := Format('SlotDampeningFactor_%d', [i]);
                 settings.DeleteKey(section, key);
               end;
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
        exit;
@@ -484,11 +493,16 @@ procedure TFrmEditor.ev_Change_rSlotDampeningFactor(Sender: TObject);
 var
   section, key: string;
 begin
-  if doUpdateIni and Assigned(settings) and (RvSlotCount.Value > 0) then
+  if doUpdateIni and Assigned(settings) then
      try
        section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
+       if (RvSlotCount.Value <= 0) then
+          key := 'DampeningFactor'
+       else
+          key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
        settings.WriteFloat(section, key, RvSlotDampeningFactor.Position / 100.0);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -506,6 +520,8 @@ begin
        else
           key := 'FileName';
        settings.WriteString(section, key, RvSlotFileName.Text);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -520,6 +536,8 @@ begin
        section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
        key := Format('SlotLoudnessFactor_%d', [RvSelectSlot.ItemIndex + 1]);
        settings.WriteFloat(section, key, RvSlotLoudnessFactor.Position / 100.0);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -537,6 +555,8 @@ begin
        else
           key := 'Owner';
        settings.WriteString(section, key, RvSlotOwnerList.Text);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
      except
        ShowWriteFailedError;
      end;
@@ -699,8 +719,11 @@ begin
          else
             begin
               RvSlotLoudnessFactor.Position := 0;
-              RvSlotDampeningFactor.Position := 100;
+              key := 'DampeningFactor';
+              RvSlotDampeningFactor.Position := round(settings.ReadFloat(section, key, 1.0) * 100);
             end;
+         if settings.SectionExists('Radio_0') then
+            settings.EraseSection('Radio_0');
        except
          RvSlotFileName.Text := '';
          RvSlotOwnerList.Text := '';
@@ -730,6 +753,8 @@ begin
          else
             RvMasterLoudnessFactor.Position := round(settings.ReadFloat(section, 'LoudnessFactor', 0.0) * 100);
          RvName.Text := settings.ReadString(section, 'RadioText', '?Unnamed Station?');
+         if settings.SectionExists('Radio_0') then
+            settings.EraseSection('Radio_0');
        except
          RvSlotCount.Value := 0;
          RvMasterLoudnessFactor.Position := 0;
@@ -745,6 +770,8 @@ begin
          RvMasterLoudnessFactor.Position := 0;
          settings.WriteString(section, 'RadioText', '?Unnamed Station?');
          RvName.Text := '?Unnamed Station?';
+         if settings.SectionExists('Radio_0') then
+            settings.EraseSection('Radio_0');
        except
          RvSlotCount.Value := 0;
          RvMasterLoudnessFactor.Position := 0;
