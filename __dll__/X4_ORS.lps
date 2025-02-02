@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="1">
+      <Unit0>
+        <Filename Value="X4_ORS.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="88"/>
+        <CursorPos X="130" Y="103"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit0>
+    </Units>
+    <JumpHistory Count="2" HistoryIndex="1">
+      <Position1>
+        <Filename Value="X4_ORS.lpr"/>
+        <Caret Line="22" Column="44" TopLine="5"/>
+      </Position1>
+      <Position2>
+        <Filename Value="X4_ORS.lpr"/>
+      </Position2>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>
