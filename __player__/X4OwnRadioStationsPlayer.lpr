@@ -31,24 +31,9 @@ type
     CanHearMusic: boolean;
   end;
 
-  TKeyBinding = record
-    IniSettingName: string;
-    Key: integer;
-  end;
-
 var
   ProgramSettings: TProgramSettings;
   GameStatus: TGameStatus;
-  KeyBindings: array [1..7] of TKeyBinding =
-    (
-     (IniSettingName: 'Keys.Modifier_1'; Key: 0),
-     (IniSettingName: 'Keys.Modifier_2'; Key: 0),
-     (IniSettingName: 'Keys.Func_PrevStation'; Key: 0),
-     (IniSettingName: 'Keys.Func_NextStation'; Key: 0),
-     (IniSettingName: 'Keys.Func_ReplayThisMP3'; Key: 0),
-     (IniSettingName: 'Keys.Func_SkipThisMP3'; Key: 0),
-     (IniSettingName: 'Keys.Func_ReloadApp'; Key: 0)
-    );
   Manager: TRadioStationManager;
   ClosestStationData: TFactionDistanceDataArray;
   Settings: TIniFile;
@@ -70,24 +55,22 @@ begin
 end;
 
 procedure GetMP3Data(lst: TStrings);
-const
-  masks: array [0..6] of string = ('mp3/*.wav', 'mp3/*.wave', 'mp3/*.ogg', 'mp3/*.aiff', 'mp3/*.mp1', 'mp3/*.mp2', 'mp3/*.mp3');
 var
   rec: TSearchRec;
-  i: integer;
   fn: string;
 begin
   lst.Clear;
-  for i := 0 to High(masks) do
-      if (FindFirst(masks[i], faAnyFile, rec) = 0) then
-         begin
-          repeat
-            fn := Format('mp3/%s', [rec.Name]);
-            if (lst.IndexOf(fn) < 0) then
-               lst.Add(fn);
-          until (FindNext(rec) <> 0);
-          FindClose(rec);
-         end;
+  if (FindFirst('mp3/*', faAnyFile, rec) = 0) then
+     begin
+       repeat
+          if ((rec.Attr and faDirectory) = faDirectory) or (rec.Name = '.') or (rec.Name = '..') then
+             continue; // Do not load directories!
+          fn := Format('mp3/%s', [rec.Name]);
+          if (lst.IndexOf(fn) < 0) then
+             lst.Add(fn);
+       until (FindNext(rec) <> 0);
+       FindClose(rec);
+     end;
 end;
 
 // ********************************
@@ -164,7 +147,7 @@ begin
                          'music_volume':
                            begin
                              if TryStrToInt(tokenValue, i) then
-                                GameStatus.MusicVolume := min(1.0, max(0.0, i / 100.0))
+                                GameStatus.MusicVolume := NormalizeFloat(i / 100.0, 0.0, 1.0)
                              else
                                 begin
                                   Log('READ DATA', Format('Cannot convert MusicVolume property (''%s'') to int! Assuming zero!', [tokenValue]));
@@ -260,8 +243,6 @@ begin
                    rsnames := Manager.GetNameList;
                    for i := 0 to High(rsnames) do
                        answer := answer + Format(#10'radio_station: %s', [rsnames[i]]);
-                   for i := Low(KeyBindings) to High(KeyBindings) do
-                       answer := answer + Format(#10'key_binding: %d %d', [i, KeyBindings[i].Key]);
                    answer := answer + Format(#10'latency: %d', [ProgramSettings.Latency]);
 
                    // Send data
@@ -303,21 +284,22 @@ begin
   Settings := TIniFile.Create('settings.ini');
 
   // Global settings
-  ProgramSettings.Latency := min(5000, max(10, ReadIntSetting(Settings, 'Global.Latency', 1000)));
+  ProgramSettings.Latency := NormalizeInt(ReadIntSetting(Settings, 'Global.Latency', 1000), 10, 5000);
   ProgramSettings.RandomizeTracks := (ReadIntSetting(Settings, 'Global.RandomizeTracks', 0) <> 0);
   ProgramSettings.NoOnlineStreams := (ReadIntSetting(Settings, 'Global.NoOnlineStreams', 0) <> 0);
   ProgramSettings.LinearVolume := (ReadIntSetting(Settings, 'Global.UseLinearVolume', 0) <> 0);
-  ProgramSettings.MasterLoudness := min(1.0, max(0.0, ReadFloatSetting(Settings, 'Global.LoudnessFactor', 1.0)));
-
-  // Key bindings
-  for i := Low(KeyBindings) to High(KeyBindings) do
-      KeyBindings[i].Key := ReadIntSetting(Settings, KeyBindings[i].IniSettingName, 0);
+  ProgramSettings.MasterLoudness := NormalizeFloat(ReadFloatSetting(Settings, 'Global.LoudnessFactor', 1.0), 0.0, 1.0);
 
   // Radio stations
   for i := 1 to max(0, ReadIntSetting(Settings, 'Global.NumberOfStations', 0)) do
       begin
         radio := TRadioStation.Create;
         slotCount := ReadIntSetting(Settings, Format('Radio_%d.SlotCount', [i]), 0);
+        if (slotCount > 0) then
+           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [i]), 0.0) // New-style
+        else
+           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [i]), 0.0);  // Old-style
+        radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [i]), '-- NONAME --');
         for j := 1 to max(1, slotCount) do
             begin
               if (slotCount > 0) then
@@ -354,32 +336,31 @@ begin
                    if (slotCount > 0) then
                       begin
                         // New-style
-                        loudFactor := min(1.0, max(0.0, ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [i, j]), 0.0)));
-                        dampFactor := min(1.0, max(0.0, ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [i, j]), 0.0)));
-                        radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor);
+                        loudFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [i, j]), 0.0), 0.0, 1.0);
+                        dampFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [i, j]), 0.0), 0.0, 1.0)
                       end
                    else
                       begin
                         // Old-stlye
-                        dampFactor := min(1.0, max(0.0, ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [i]), 0.0)));
-                        radio.AddRadioSlot(slotOwners, slotFileName, 1.0, dampFactor);
+                        dampFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [i]), 0.0), 0.0, 1.0);
+                        loudFactor := 1.0;
                       end;
+                   if radio.CheckSlotOwnerListCompatibility(slotOwners) then
+                      begin
+                        if not radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor) then
+                           Log('INIT', Format('Cannot add slot %d for station %d (''%s'')!', [j, i, radio.RadioStationName]));
+                      end
+                   else
+                      Log('INIT', Format('Ownership collision detected, slot %d for station %d (''%s'') will be ignored!', [j, i, radio.RadioStationName]));
                    SetLength(slotOwners, 0);
                  end;
             end;
         if radio.IsValid then
-           begin
-             if (slotCount > 0) then
-                radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [i]), 0.0) // New-style
-             else
-                radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [i]), 0.0);  // Old-style
-             radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [i]), '?Unnamed Station?');
-             Manager.AddRadioStation(radio);
-           end
+           Manager.AddRadioStation(radio)
         else
            begin
+             Log('INIT', Format('Radio station %d (''%s'') failed to load!', [i, radio.RadioStationName]));
              radio.Free;
-             Log('INIT', Format('Radio station %d failed to load!', [i]));
            end;
       end;
 
@@ -392,15 +373,10 @@ begin
           ShuffleList(mp3List);
        if (mp3List.Count > 0) then
           begin
-            radio := TRadioStation.Create(mp3List);
+            radio := TRadioStation.Create(mp3List, NormalizeFloat(ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0), 0.0, 1.0));
+            radio.RadioStationName := ReadStringSetting(Settings, 'Radio_MP3.RadioText', '-- NONAME (MP3) --');
             if radio.IsValid then
-               begin
-                 if not NoLog then
-                    radio.WriteReport('MP3Report.log');
-                 radio.MasterVolume := min(1.0, max(0.0, ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0)));
-                 radio.RadioStationName := ReadStringSetting(Settings, 'Radio_MP3.RadioText', '?Unnamed MP3 Station?');
-                 Manager.AddRadioStation(radio);
-               end
+               Manager.AddRadioStation(radio)
             else
               begin
                 radio.Free;
@@ -410,6 +386,10 @@ begin
        mp3List.Clear;
        mp3List.Free;
      end;
+
+  // Radio Station Report
+  if (not NoLog) then
+     Manager.WriteReport('x4_ors_report.log');
 end;
 
 procedure FiniProgram;
@@ -421,17 +401,16 @@ end;
 
 function RunProgram: boolean;
 var
-  lasttick: int64;
+  lasttick: qword;
 begin
   Result := false; // Result - FALSE: Must exit program after function return
   lasttick := GetTickCount64;
 
   // Initialize radio stations
-  Manager.Process(-1, 0.0, nil, false);
-  Manager.Status := rsPlaying;
+  Manager.Process(-1, 0.0, nil, false, rsPlaying);
   if ProgramSettings.RandomizeTracks then
      Manager.SetRandomPos(0.775);
-  Manager.Status := rsPaused;
+  Manager.Process(-1, 0.0, nil, false, rsPaused);
 
   // Event loop
   while IsGameRunning do
@@ -445,14 +424,12 @@ begin
                       if GameStatus.IsActiveMenu then
                          begin
                            if GameStatus.CanHearMusic then
-                              Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume)
+                              Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume, rsPlaying)
                            else
-                              Manager.Process(-1, 0.0, nil, false);
-                           if (Manager.Status = rsPaused) then
-                              Manager.Status := rsPlaying;
+                              Manager.Process(-1, 0.0, nil, false, rsPlaying);
                          end
-                      else if (Manager.Status <> rsPaused) then
-                         Manager.Status := rsPaused;
+                      else
+                         Manager.Process(-1, 0.0, nil, false, rsPaused);
                     end;
                   2:
                     begin
@@ -460,8 +437,8 @@ begin
                       exit(true); // Result - TRUE: Must reload program after function return
                     end;
                   else
-                    if (Manager.Status <> rsPaused) and ((GetTickCount64 - lasttick) > ProgramSettings.Latency) then
-                       Manager.Status := rsPaused;
+                    if ((GetTickCount64 - lasttick) > ProgramSettings.Latency) then
+                       Manager.Process(-1, 0.0, nil, false, rsPaused);
             end;
           finally
             UnmapViewOfFile(MemoryBuffer);

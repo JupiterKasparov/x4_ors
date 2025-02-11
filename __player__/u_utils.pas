@@ -15,6 +15,8 @@ procedure WriteStringSetting(ini: TIniFile; name, value: string);
 procedure WriteIntSetting(ini: TIniFile; name: string; value: integer);
 procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
 procedure ShuffleList(lst: TStrings);
+function NormalizeFloat(flt, minvalue, maxvalue: double): double;
+function NormalizeInt(ivalue, minvalue, maxvalue: integer): integer;
 
 var
   X4OrsFormatSettings: TFormatSettings;
@@ -100,24 +102,49 @@ end;
 procedure ShuffleList(lst: TStrings);
 var
   i, r: integer;
-  temp: string;
 begin
   if (lst.Count > 1) then
-     for i := 0 to lst.Count - 1 do
+     for i := lst.Count - 1 downto 0 do
          begin
-           r := random(lst.Count);
+           r := random(i + 1);
            if (r <> i) then
-              begin
-                temp := lst[i];
-                lst[i] := lst[r];
-                lst[r] := temp;
-              end;
+              lst.Exchange(i, r);
          end;
+end;
+
+function NormalizeFloat(flt, minvalue, maxvalue: double): double;
+begin
+  if (maxvalue < minvalue) then
+     maxvalue := minvalue;
+  if (flt < minvalue) then
+     Result := minvalue
+  else if (flt > maxvalue) then
+     Result := maxvalue
+  else
+     Result := flt;
+end;
+
+function NormalizeInt(ivalue, minvalue, maxvalue: integer): integer;
+begin
+  if (maxvalue < minvalue) then
+     maxvalue := minvalue;
+  if (ivalue < minvalue) then
+     Result := minvalue
+  else if (ivalue > maxvalue) then
+     Result := maxvalue
+  else
+     Result := ivalue;
 end;
 
 initialization
   X4OrsFormatSettings := DefaultFormatSettings;
   X4OrsFormatSettings.DecimalSeparator := '.';
+  X4OrsFormatSettings.ShortDateFormat := 'dd/mm/yyy';
+  X4OrsFormatSettings.ShortTimeFormat := 'hh:nn:ss.zzz';
+  X4OrsFormatSettings.LongDateFormat := 'dd/mm/yyy';
+  X4OrsFormatSettings.LongTimeFormat := 'hh:nn:ss.zzz';
+  X4OrsFormatSettings.DateSeparator := '/';
+  X4OrsFormatSettings.TimeSeparator := ':';
 
 end.
 

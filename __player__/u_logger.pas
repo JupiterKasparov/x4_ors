@@ -5,7 +5,7 @@ unit u_logger;
 interface
 
 uses
-  Classes, SysUtils, Windows;
+  Classes, SysUtils, syncobjs, u_utils;
 
 var
   NoLog: boolean = false;
@@ -20,29 +20,34 @@ const
   logname: string = 'x4_ors.log';
 
 var
-  bLogActive: boolean = false;
+  logActive: boolean;
+  logCriticalSection: TCriticalSection;
 
 procedure Log(category, msg: string);
 var
-  time: SYSTEMTIME;
-  f: System.Text;
+  time: TDateTime;
+  log: System.Text;
 begin
-  if not NoLog then
+  if (not NoLog) and Assigned(logCriticalSection) then
      begin
-       GetLocalTime(time);
-       System.Assign(f, logname);
-       // In case of IO error, no log is done!
-       {$I-}
-       if bLogActive then
-          Append(f)
-       else
-          begin
-            bLogActive := true;
-            Rewrite(f);
-          end;
-       writeln(f, Format('[%s]: %.2d/%.2d/%.4d %.2d:%.2d:%.2d.%.3d - %s', [category, time.wDay, time.wMonth, time.wYear, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds, msg]));
-       System.Close(f);
-       {$I+}
+       logCriticalSection.Acquire;
+       try
+         time := Now;
+         System.Assign(log, logname);
+         {$I-}
+         if (not logActive) then
+            begin
+              logActive := true;
+              Rewrite(log);
+            end
+         else
+            Append(log);
+         writeln(log, Format('[%s]: %s - %s', [category, DateTimeToStr(time, X4OrsFormatSettings, true), msg]));
+         System.Close(log);
+         {$I+}
+       finally
+         logCriticalSection.Release;
+       end;
      end;
 end;
 
@@ -60,6 +65,13 @@ begin
   else
      LogError(Format('Exception %s at address 0x%p', [xcpt.ClassName, addr]));
 end;
+
+initialization
+  logActive := false;
+  logCriticalSection := TCriticalSection.Create;
+
+finalization
+  FreeAndNil(logCriticalSection);
 
 end.
 

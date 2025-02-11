@@ -20,7 +20,7 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="19"/>
-      <RevisionNr Value="3"/>
+      <RevisionNr Value="4"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2025" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">
@@ -46,23 +46,23 @@
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
-        <Filename Value="u_radio.pas"/>
+        <Filename Value="u_manager.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit1>
       <Unit2>
-        <Filename Value="u_song.pas"/>
+        <Filename Value="u_radio.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit2>
       <Unit3>
-        <Filename Value="u_logger.pas"/>
+        <Filename Value="u_song.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit3>
       <Unit4>
-        <Filename Value="u_utils.pas"/>
+        <Filename Value="u_logger.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit4>
       <Unit5>
-        <Filename Value="u_manager.pas"/>
+        <Filename Value="u_utils.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit5>
     </Units>

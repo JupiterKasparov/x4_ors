@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, ComCtrls, Spin, Windows, IniFiles;
+  ExtCtrls, ComCtrls, Spin, Windows, IniFiles, Math;
 
 type
 
@@ -25,7 +25,7 @@ type
     GbrSlotProps: TGroupBox;
     LbrName: TLabel;
     LbrSelectSlot: TLabel;
-    LbrSlotDampeningFactor: TLabel;
+    LbrSlotEffectiveRange: TLabel;
     LbrSlotFileName: TLabel;
     LbrSlotCount: TLabel;
     LbrMasterLoudnessFactor: TLabel;
@@ -34,7 +34,7 @@ type
     PrSlotOnlyProps: TPanel;
     RvName: TEdit;
     RvMasterLoudnessFactor: TTrackBar;
-    RvSlotDampeningFactor: TTrackBar;
+    RvSlotEffectiveRange: TFloatSpinEdit;
     RvSlotFileName: TEdit;
     RvSelectSlot: TComboBox;
     RvSelectStation: TComboBox;
@@ -492,6 +492,7 @@ end;
 procedure TFrmEditor.ev_Change_rSlotDampeningFactor(Sender: TObject);
 var
   section, key: string;
+  value: double;
 begin
   if doUpdateIni and Assigned(settings) then
      try
@@ -500,7 +501,10 @@ begin
           key := 'DampeningFactor'
        else
           key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-       settings.WriteFloat(section, key, RvSlotDampeningFactor.Position / 100.0);
+       value := RvSlotEffectiveRange.Value;
+       if (value > 0.01) then
+           value := power(exp(1.0), Math.logn(exp(1.0), 0.5) / value);
+       settings.WriteFloat(section, key, value);
        if settings.SectionExists('Radio_0') then
           settings.EraseSection('Radio_0');
      except
@@ -691,6 +695,7 @@ procedure TFrmEditor.ev_SelectSlot(Sender: TObject);
 var
   locAllowUpdates: boolean;
   section, key: string;
+  fvalue: double;
 begin
   locAllowUpdates := doUpdateIni;
   doUpdateIni := false;
@@ -714,13 +719,23 @@ begin
               key := Format('SlotLoudnessFactor_%d', [RvSelectSlot.ItemIndex + 1]);
               RvSlotLoudnessFactor.Position := round(settings.ReadFloat(section, key, 0.0) * 100);
               key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-              RvSlotDampeningFactor.Position := round(settings.ReadFloat(section, key, 1.0) * 100);
+              fvalue := settings.ReadFloat(section, key, 1.0);
+              if (fvalue < 0.01) then
+                 fvalue := 0.01
+              else if (fvalue > 0.99998) then
+                 fvalue := 0.99998;
+              RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
             end
          else
             begin
               RvSlotLoudnessFactor.Position := 0;
               key := 'DampeningFactor';
-              RvSlotDampeningFactor.Position := round(settings.ReadFloat(section, key, 1.0) * 100);
+              fvalue := settings.ReadFloat(section, key, 1.0);
+              if (fvalue < 0.01) then
+                 fvalue := 0.01
+              else if (fvalue > 0.99998) then
+                 fvalue := 0.99998;
+              RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
             end;
          if settings.SectionExists('Radio_0') then
             settings.EraseSection('Radio_0');
@@ -728,7 +743,7 @@ begin
          RvSlotFileName.Text := '';
          RvSlotOwnerList.Text := '';
          RvSlotLoudnessFactor.Position := 0;
-         RvSlotDampeningFactor.Position := 100;
+         RvSlotEffectiveRange.Value := RvSlotEffectiveRange.MaxValue;
        end;
      end;
 

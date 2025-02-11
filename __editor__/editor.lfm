@@ -598,26 +598,29 @@ object FrmEditor: TFrmEditor
               TabOrder = 0
             end
           end
-          object LbrSlotDampeningFactor: TLabel
+          object LbrSlotEffectiveRange: TLabel
             Left = 8
             Height = 25
             Top = 64
             Width = 168
             Alignment = taRightJustify
             AutoSize = False
-            Caption = 'Dampening factor:'
+            Caption = 'Effective range (km):'
             Layout = tlCenter
             ParentColor = False
           end
-          object RvSlotDampeningFactor: TTrackBar
+          object RvSlotEffectiveRange: TFloatSpinEdit
             Left = 184
             Height = 25
             Top = 64
             Width = 184
-            Max = 100
+            AutoSize = False
+            Increment = 10
+            MaxValue = 16000
+            MinValue = 0
             OnChange = ev_Change_rSlotDampeningFactor
-            Position = 100
             TabOrder = 3
+            Value = 16000
           end
         end
       end

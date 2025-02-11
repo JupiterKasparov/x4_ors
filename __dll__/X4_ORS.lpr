@@ -7,23 +7,41 @@ library X4_ORS;
 {$R *.res}
 
 uses
-  SysUtils, Windows, ctypes, lua;
+  SysUtils, strutils, Windows, ctypes, lua;
+
+type
+  UniverseID = cuint64;
+  PUniverseID = ^UniverseID;
 
 const
   AppMutexName: string = 'jupiter_x4_ors__program_instance';
   SharedMemName: string = 'jupiter_x4_ors_memory__main_shared_mem';
+  IniFileName: string = 'extensions/X4_ORS/radiostations/settings.ini';
+  ExeFileName: string = 'extensions/X4_ORS/radiostations/X4OwnRadioStationsPlayer.exe';
   SharedMemSize = 262144;
 
 var
   SharedMemHandle: HANDLE;
   SharedMemBuffer: Pointer;
   X4OrsFormatSettings: TFormatSettings;
-  CGetPlayerID: function: cuint64; cdecl;
-  CGetDistanceBetween: function(component1id, component2id: cuint64): cfloat; cdecl;
+
+var
+  CGetPlayerID: function: UniverseID; cdecl;
+  CGetDistanceBetween: function(component1id, component2id: UniverseID): cfloat; cdecl;
   CGetNumAllFactions: function(includehidden: cbool): cuint32; cdecl;
   CGetAllFactions: function(res: PPChar; resultlen: cuint32; includehidden: cbool): cuint32; cdecl;
   CGetNumAllFactionStations: function(factionid: PChar): cuint32; cdecl;
-  CGetAllFactionStations: function(res: pcuint64; resultlen: cuint32; factionid: PChar): cuint32; cdecl;
+  CGetAllFactionStations: function(res: PUniverseID; resultlen: cuint32; factionid: PChar): cuint32; cdecl;
+  CGetNumStationModules: function(stationid: UniverseID; includeconstructions, includewrecks: cbool): cuint32; cdecl;
+
+// Local utilities
+function local_ini_GetInt(section, key: string; defval: integer): integer;
+var
+  inifile: string;
+begin
+  inifile := IncludeTrailingPathDelimiter(GetCurrentDir) + IniFileName;
+  Result := integer(GetPrivateProfileInt(PChar(section), PChar(key), WINT(defval), PChar(inifile)));
+end;
 
 // Shorthand funcs
 procedure internal_OpenMemBuf;
@@ -79,17 +97,16 @@ begin
   internal_FreeMemBuf;
   Result := 0;
 end;
-
 function GetFactionDataString(L: PLua_State): cint; cdecl;
 var
   i, j: integer;
-  playerid: cuint64;
+  playerid: UniverseID;
   numFactions: cuint32;
   factionNames: array of PChar;
   currFaction: PChar;
   shortestDist, currentDist: cfloat;
   numCurrFactStations: cuint32;
-  factionStations: array of cuint64;
+  factionStations: array of UniverseID;
   answer: string;
 begin
   answer := '';
@@ -106,12 +123,13 @@ begin
           numCurrFactStations := CGetAllFactionStations(@factionStations[0], numCurrFactStations, currFaction);
           shortestDist := cfloat.MaxValue;
           for j := 0 to numCurrFactStations - 1 do
-              begin
-                currentDist := CGetDistanceBetween(playerid, factionStations[j]);
-                if (currentDist < shortestDist) then
-                   shortestDist := currentDist;
-              end;
-          answer := answer + format(#10'faction_station: %s %f', [StrPas(currFaction), shortestDist], X4OrsFormatSettings);
+              if (CGetNumStationModules(factionStations[j], cbool(0), cbool(0)) <> 0) then
+                 begin
+                   currentDist := CGetDistanceBetween(playerid, factionStations[j]);
+                   if (currentDist < shortestDist) then
+                      shortestDist := currentDist;
+                 end;
+          answer := answer + Format(#10'faction_station: %s %f', [StrPas(currFaction), shortestDist], X4OrsFormatSettings);
         end;
   finally
     SetLength(factionNames, 0);
@@ -155,7 +173,23 @@ begin
              else
                 break;
            end;
+       answer := Trim(answer);
+
+       // Hack the Key Bindings into the result string!
+       if AnsiStartsStr('programdata', Trim(answer)) then
+          begin
+            answer := answer + Format(#10'key_binding: %d %d', [1, local_ini_GetInt('Keys', 'Modifier_1', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [2, local_ini_GetInt('Keys', 'Modifier_2', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [3, local_ini_GetInt('Keys', 'Func_PrevStation', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [4, local_ini_GetInt('Keys', 'Func_NextStation', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [5, local_ini_GetInt('Keys', 'Func_ReplayThisMP3', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [6, local_ini_GetInt('Keys', 'Func_SkipThisMP3', 0)]);
+            answer := answer + Format(#10'key_binding: %d %d', [7, local_ini_GetInt('Keys', 'Func_ReloadApp', 0)]);
+          end;
+
+       // Return answer
        lua_pushstring(L, PChar(answer));
+
      except
        lua_pushstring(L, '');
      end
@@ -166,7 +200,7 @@ end;
 
 function ParseAnswer(L: PLua_State): cint; cdecl;
 var
-  index, tok1, tok2, tok3: integer;
+  index, tok1, tok2: integer;
   answer, dataline, tokenName, tokenValue: string;
 begin
   lua_newtable(L);
@@ -202,7 +236,6 @@ begin
                end;
 
             // Add to result list
-
             lua_pushstring(L, PChar(tokenName));
             lua_rawseti(L, -2, cint((index * 2) + 1));
             lua_pushstring(L, PChar(tokenValue));
@@ -260,6 +293,7 @@ end;
 
 function StartExe(L: PLua_State): cint; cdecl;
 var
+  exename: string;
   fullpath: array [0..2047] of char;
   dummy: LPSTR;
   startupInfoStruct: TStartupInfo;
@@ -267,12 +301,14 @@ var
   procExitCode: DWORD;
 begin
   Result := 1;
+  exename := ExeFileName;
+  DoDirSeparators(exename);
   dummy := nil;
   ZeroMemory(@fullpath[0], Length(fullpath));
   ZeroMemory(@startupInfoStruct, sizeof(startupInfoStruct));
   ZeroMemory(@processInfoStruct, sizeof(processInfoStruct));
   startupInfoStruct.cb := sizeof(startupInfoStruct);
-  if (GetFullPathName('extensions/X4_ORS/radiostations/X4OwnRadioStationsPlayer.exe', Length(fullpath), @fullpath[0], dummy) <> 0) then
+  if (GetFullPathName(PChar(exename), Length(fullpath), @fullpath[0], dummy) <> 0) then
      begin
        if (CreateProcess(fullpath, nil, nil, nil, BOOL(0), 0, nil, nil, startupInfoStruct, processInfoStruct) <> BOOL(0)) then
           begin
@@ -345,9 +381,11 @@ begin
      (CGetNumAllFactions = nil) or
      (CGetAllFactions = nil) or
      (CGetNumAllFactionStations = nil) or
-     (CGetAllFactionStations = nil) then
+     (CGetAllFactionStations = nil) or
+     (CGetNumStationModules = nil)
+     then
         begin
-          lua_pushliteral(L, 'Not all necessary game functions could be found!');
+          lua_pushliteral(L, 'Some necessary game functions could not be found!');
           lua_error(L);
         end
   else
@@ -384,10 +422,22 @@ var
   modHandle: HMODULE;
 begin
   DLL_Process_Detach_Hook := @FreeLib;
+
+  // Var init
   SharedMemBuffer := nil;
   SharedMemHandle := HANDLE(0);
+
+  // Formatting init
   X4OrsFormatSettings := DefaultFormatSettings;
   X4OrsFormatSettings.DecimalSeparator := '.';
+  X4OrsFormatSettings.ShortDateFormat := 'dd/mm/yyy';
+  X4OrsFormatSettings.ShortTimeFormat := 'hh:nn:ss.zzz';
+  X4OrsFormatSettings.LongDateFormat := 'dd/mm/yyy';
+  X4OrsFormatSettings.LongTimeFormat := 'hh:nn:ss.zzz';
+  X4OrsFormatSettings.DateSeparator := '/';
+  X4OrsFormatSettings.TimeSeparator := ':';
+
+  // X4 function assignment
   modHandle := GetModuleHandle(nil);
   Pointer(CGetPlayerID) := GetProcAddress(modHandle, 'GetPlayerID');
   Pointer(CGetDistanceBetween) := GetProcAddress(modHandle, 'GetDistanceBetween');
@@ -395,5 +445,6 @@ begin
   Pointer(CGetAllFactions) := GetProcAddress(modHandle, 'GetAllFactions');
   Pointer(CGetNumAllFactionStations) := GetProcAddress(modHandle, 'GetNumAllFactionStations');
   Pointer(CGetAllFactionStations) := GetProcAddress(modHandle, 'GetAllFactionStations');
+  Pointer(CGetNumStationModules) := GetProcAddress(modHandle, 'GetNumStationModules');
 end.
 

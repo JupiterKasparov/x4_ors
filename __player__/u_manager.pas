@@ -5,7 +5,7 @@ unit u_manager;
 interface
 
 uses
-  Classes, SysUtils, u_radio;
+  Classes, SysUtils, u_radio, u_utils;
 
 type
   TRadioStationManager = class
@@ -16,35 +16,26 @@ type
     _volume: double;
     _data: PFactionDistanceDataArray;
     _linearvolume: boolean;
-    procedure int_SetStatus(st: TRadioStatus);
   public
     constructor Create;
     destructor Destroy; override;
     procedure AddRadioStation(station: TRadioStation);
-    procedure Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean);
+    procedure Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean; CurrentStatus: TRadioStatus);
     procedure SetRandomPos(maxrandompos: double);
     procedure SkipNextTrack;
     procedure ReplayCurrTrack;
     function GetNameList: TStringArray;
-    property Status: TRadioStatus read _status write int_SetStatus;
+    procedure WriteReport(fileName: string);
+    property Status: TRadioStatus read _status;
   end;
 
 implementation
-
-procedure TRadioStationManager.int_SetStatus(st: TRadioStatus);
-begin
-  if (_status = rsError) or (st = rsError) then
-     exit;
-  _status := st;
-  Process(_rsindex, _volume, _data, _linearvolume);
-end;
 
 constructor TRadioStationManager.Create;
 begin
   inherited;
   _stations := TRadioStationList.Create;
-  _status := rsPlaying;
-  Process(-1, 0.0, nil, false);
+  Process(-1, 0.0, nil, false, rsPlaying);
 end;
 
 destructor TRadioStationManager.Destroy;
@@ -62,24 +53,21 @@ begin
   if (_stations.IndexOf(station) < 0) then
      begin
        _stations.Add(station);
-       Process(_rsindex, _volume, _data, _linearvolume);
+       Process(_rsindex, _volume, _data, _linearvolume, _status);
      end;
 end;
 
-procedure TRadioStationManager.Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean);
+procedure TRadioStationManager.Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean; CurrentStatus: TRadioStatus);
 var
   i: integer;
   locvol: double;
 begin
   // Store external data
-  _rsindex := rsindex;
-  if (_rsindex > _stations.Count - 1) or (_rsindex < -1) then
-     _rsindex := -1;
-  _volume := volume;
-  if (_volume > 1.0) then
-     _volume := 1.0
-  else if (_volume < 0.0) then
-     _volume := 0.0;
+  if (CurrentStatus = rsError) then
+     CurrentStatus := rsPaused;
+  _status := CurrentStatus;
+  _rsindex := NormalizeInt(rsindex, -1, _stations.Count - 1);
+  _volume := NormalizeFloat(volume, 0.0, 1.0);
   _data := data;
   _linearvolume := linearvolume;
 
@@ -90,10 +78,9 @@ begin
   for i := 0 to _stations.Count - 1 do
       begin
         if (_rsindex <> i) then
-           _stations[i].Process(nil, 0.0)
+           _stations[i].Process(nil, 0.0, _status, false)
         else
-          _stations[i].Process(_data, locvol);
-        _stations[i].Status := _status;
+          _stations[i].Process(_data, locvol, _status, true);
       end;
 end;
 
@@ -101,7 +88,7 @@ procedure TRadioStationManager.SetRandomPos(maxrandompos: double);
 var
   i: integer;
 begin
-  for i := 0to _stations.Count - 1 do
+  for i := 0 to _stations.Count - 1 do
       _stations[i].SetRandomPos(maxrandompos);
 end;
 
@@ -124,6 +111,32 @@ begin
   SetLength(Result, _stations.Count);
   for i := 0 to _stations.Count - 1 do
       Result[i] := _stations[i].RadioStationName;
+end;
+
+procedure TRadioStationManager.WriteReport(fileName: string);
+var
+  report: TStrings;
+  i: integer;
+  log: System.Text;
+begin
+  report := TStringList.Create;
+  try
+    for i := 0 to _stations.Count - 1 do
+        begin
+          report.Add('Radio station %d:', [i + 1]);
+          _stations[i].GenerateReport(report, 1);
+          report.Add('');
+        end;
+    System.Assign(log, fileName);
+    {$I-}
+    Rewrite(log);
+    for i := 0 to report.Count - 1 do
+        writeln(log, report[i]);
+    System.Close(log);
+    {$I+}
+  finally
+    report.Free;
+  end;
 end;
 
 end.
