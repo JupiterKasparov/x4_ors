@@ -21,7 +21,8 @@
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="19"/>
       <RevisionNr Value="4"/>
-      <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" LegalCopyright="(C) 2020-2025" ProductVersion=""/>
+      <BuildNr Value="1"/>
+      <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS" ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
@@ -81,9 +82,8 @@
       <SmartLinkUnit Value="True"/>
       <TargetCPU Value="x86_64"/>
       <Optimizations>
-        <OptimizationLevel Value="4"/>
+        <OptimizationLevel Value="2"/>
       </Optimizations>
-      <SmallerCode Value="True"/>
     </CodeGeneration>
     <Linking>
       <Debugging>

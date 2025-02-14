@@ -11,22 +11,17 @@ type
   TRadioStationManager = class
   private
     _stations: TRadioStationList;
-    _status: TRadioStatus;
     _rsindex: integer;
-    _volume: double;
-    _data: PFactionDistanceDataArray;
-    _linearvolume: boolean;
   public
     constructor Create;
     destructor Destroy; override;
     procedure AddRadioStation(station: TRadioStation);
-    procedure Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean; CurrentStatus: TRadioStatus);
+    procedure Process(currentStationIndex: integer; currentVolume: double; factionData: PFactionDistanceDataArray; bUseLinearVol: boolean; playbackStatus: TRadioStatus; currentTime: qword);
     procedure SetRandomPos(maxrandompos: double);
     procedure SkipNextTrack;
     procedure ReplayCurrTrack;
     function GetNameList: TStringArray;
     procedure WriteReport(fileName: string);
-    property Status: TRadioStatus read _status;
   end;
 
 implementation
@@ -35,7 +30,7 @@ constructor TRadioStationManager.Create;
 begin
   inherited;
   _stations := TRadioStationList.Create;
-  Process(-1, 0.0, nil, false, rsPlaying);
+  Process(-1, 0.0, nil, false, rsPaused, 0);
 end;
 
 destructor TRadioStationManager.Destroy;
@@ -53,34 +48,31 @@ begin
   if (_stations.IndexOf(station) < 0) then
      begin
        _stations.Add(station);
-       Process(_rsindex, _volume, _data, _linearvolume, _status);
+       Process(-1, 0.0, nil, false, rsPaused, 0);
      end;
 end;
 
-procedure TRadioStationManager.Process(rsindex: integer; volume: double; data: PFactionDistanceDataArray; linearvolume: boolean; CurrentStatus: TRadioStatus);
+procedure TRadioStationManager.Process(currentStationIndex: integer; currentVolume: double; factionData: PFactionDistanceDataArray; bUseLinearVol: boolean; playbackStatus: TRadioStatus; currentTime: qword);
 var
   i: integer;
   locvol: double;
 begin
-  // Store external data
-  if (CurrentStatus = rsError) then
-     CurrentStatus := rsPaused;
-  _status := CurrentStatus;
-  _rsindex := NormalizeInt(rsindex, -1, _stations.Count - 1);
-  _volume := NormalizeFloat(volume, 0.0, 1.0);
-  _data := data;
-  _linearvolume := linearvolume;
+  // Limit parameters to valid ranges
+  if (playbackStatus = rsError) then
+     playbackStatus := rsPaused;
+  _rsindex := NormalizeInt(currentStationIndex, -1, _stations.Count - 1);
+  currentVolume := NormalizeFloat(currentVolume, 0.0, 1.0);
 
   // Do process
-  locvol := _volume;
-  if _linearvolume then
+  locvol := currentVolume;
+  if bUseLinearVol then
      locvol := (2 * locvol) - (locvol * locvol);
   for i := 0 to _stations.Count - 1 do
       begin
         if (_rsindex <> i) then
-           _stations[i].Process(nil, 0.0, _status, false)
+           _stations[i].Process(nil, 0.0, playbackStatus, currentTime, false)
         else
-          _stations[i].Process(_data, locvol, _status, true);
+          _stations[i].Process(factionData, locvol, playbackStatus, currentTime, true);
       end;
 end;
 

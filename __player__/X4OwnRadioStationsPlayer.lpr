@@ -401,35 +401,39 @@ end;
 
 function RunProgram: boolean;
 var
-  lasttick: qword;
+  currentTime, lastUpdateTime: qword;
 begin
   Result := false; // Result - FALSE: Must exit program after function return
-  lasttick := GetTickCount64;
+  currentTime := GetTickCount64;
+  lastUpdateTime := currentTime;
 
   // Initialize radio stations
-  Manager.Process(-1, 0.0, nil, false, rsPlaying);
   if ProgramSettings.RandomizeTracks then
-     Manager.SetRandomPos(0.775);
-  Manager.Process(-1, 0.0, nil, false, rsPaused);
+     begin
+       Manager.Process(-1, 0.0, nil, false, rsPlaying, currentTime);
+       Manager.SetRandomPos(0.775);
+       Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+     end;
 
   // Event loop
   while IsGameRunning do
         begin
+          currentTime := GetTickCount64;
           MemoryBuffer := MapViewOfFile(SharedMemFile, FILE_MAP_ALL_ACCESS, 0, 0, SharedMemSize);
           try
             case ProcessGameData of
                   1:
                     begin
-                      lasttick := GetTickCount64;
+                      lastUpdateTime := currentTime;
                       if GameStatus.IsActiveMenu then
                          begin
                            if GameStatus.CanHearMusic then
-                              Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume, rsPlaying)
+                              Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume, rsPlaying, currentTime)
                            else
-                              Manager.Process(-1, 0.0, nil, false, rsPlaying);
+                              Manager.Process(-1, 0.0, nil, false, rsPlaying, currentTime);
                          end
                       else
-                         Manager.Process(-1, 0.0, nil, false, rsPaused);
+                         Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
                     end;
                   2:
                     begin
@@ -437,8 +441,8 @@ begin
                       exit(true); // Result - TRUE: Must reload program after function return
                     end;
                   else
-                    if ((GetTickCount64 - lasttick) > ProgramSettings.Latency) then
-                       Manager.Process(-1, 0.0, nil, false, rsPaused);
+                    if ((currentTime - lastUpdateTime) > ProgramSettings.Latency) then
+                       Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
             end;
           finally
             UnmapViewOfFile(MemoryBuffer);

@@ -12,13 +12,13 @@ type
 
   TPlayableAudioTrack = class
   private
-    bassSample: HSAMPLE;
-    bassChannel: HCHANNEL;
+    bassStreamHandle: HSTREAM;
     _isonline, _onlinestopped: boolean;
     _status: TSongStatus;
     _vol: double;
     _filename: string;
     _errno: integer;
+    _dummystream: TMemoryStream;
     function int_GetStatus: TSongStatus;
     procedure int_SetStatus(st: TSongStatus);
     procedure int_SetVolume(vol: double);
@@ -47,11 +47,11 @@ var
 
 procedure InitOnlineStream(obj: Pointer);
 var
-  bassChannel: HCHANNEL;
+  bassStreamHandle: HCHANNEL;
   lst: TList;
 begin
   // Connect to stream
-  bassChannel := BASS_StreamCreateURL(PChar(TPlayableAudioTrack(obj)._filename), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
+  bassStreamHandle := BASS_StreamCreateURL(PChar(TPlayableAudioTrack(obj)._filename), 0, BASS_STREAM_BLOCK or BASS_STREAM_AUTOFREE, nil, nil);
   try
     lst := OnlineLoadingList.LockList;
     try
@@ -61,7 +61,7 @@ begin
            lst.Extract(obj);
 
            // Error
-           if (bassChannel = 0) then
+           if (bassStreamHandle = 0) then
               begin
                 // Set error flag
                 TPlayableAudioTrack(obj)._status := ssError;
@@ -74,27 +74,27 @@ begin
            // Success
            else if (TPlayableAudioTrack(obj).Status = ssPlaying) then
               begin
-                TPlayableAudioTrack(obj).bassChannel := bassChannel;
-                BASS_ChannelPlay(TPlayableAudioTrack(obj).bassChannel, BOOL(0));
+                TPlayableAudioTrack(obj).bassStreamHandle := bassStreamHandle;
+                BASS_ChannelPlay(TPlayableAudioTrack(obj).bassStreamHandle, BOOL(0));
                 TPlayableAudioTrack(obj).int_SetVolume(TPlayableAudioTrack(obj)._vol);
               end
 
            // Already stopped
            else
-              BASS_StreamFree(bassChannel);
+              BASS_StreamFree(bassStreamHandle);
          end
 
       // Track has already gone
-      else if (bassChannel <> 0) then
-         BASS_StreamFree(bassChannel);
+      else if (bassStreamHandle <> 0) then
+         BASS_StreamFree(bassStreamHandle);
     finally
       OnlineLoadingList.UnlockList;
     end;
   except
     // Unhandled exception occurred
     LogError(ExceptObject, ExceptAddr);
-    if (bassChannel <> 0) then
-       BASS_StreamFree(bassChannel);
+    if (bassStreamHandle <> 0) then
+       BASS_StreamFree(bassStreamHandle);
   end;
 
   // Terminate thread
@@ -118,117 +118,102 @@ begin
      end
   else
      begin
-       case BASS_ChannelIsActive(bassChannel) of
+       case BASS_ChannelIsActive(bassStreamHandle) of
             BASS_ACTIVE_STOPPED: Result := ssStopped;
             BASS_ACTIVE_PLAYING, BASS_ACTIVE_STALLED: Result := ssPlaying;
-            BASS_ACTIVE_PAUSED: Result := ssPaused;
+            BASS_ACTIVE_PAUSED, BASS_ACTIVE_PAUSED_DEVICE: Result := ssPaused;
             else Result := ssStopped;
        end;
      end;
 end;
 
 procedure TPlayableAudioTrack.int_SetStatus(st: TSongStatus);
-
-          procedure InternalPlayTrack;
-          var
-            lst: TList;
-          begin
-            if _isonline then
-               begin
-                 _onlinestopped := false;
-                 if (bassChannel <> 0) then
-                    BASS_ChannelSetAttribute(bassChannel, BASS_ATTRIB_VOL, _vol)
-                 else
-                    begin
-                      lst := OnlineLoadingList.LockList;
-                      try
-                        if (lst.IndexOf(Pointer(Self)) < 0) then
-                           begin
-                             lst.Add(Pointer(Self));
-                             TThread.ExecuteInThread(@InitOnlineStream, Pointer(Self), nil);
-                           end;
-                      finally
-                        OnlineLoadingList.UnlockList;
-                      end;
-                    end;
-               end
-            else
-               begin
-                 bassChannel := BASS_SampleGetChannel(bassSample, BOOL(0));
-                 if (bassChannel = 0) then
-                    begin
-                      _status := ssError;
-                      _errno := BASS_ErrorGetCode;
-                      LogError(Format('Failed to play ''%s''! Error: %s', [_filename, GetErrorInfo]));
-                    end
-                 else
-                    BASS_ChannelPlay(bassChannel, BOOL(1));
-               end;
-            int_SetVolume(_vol);
-          end;
-
+var
+  currStatus: TSongStatus;
+  lst: TList;
 begin
-  if (int_GetStatus in [ssNone, ssError]) then
+  // Current status
+  currStatus := int_GetStatus;
+  if (currStatus in [ssNone, ssError]) then
      exit;
   if (st = ssError) or (st = ssNone) then
      st := ssStopped;
+
+  // Modify status
   if (st = ssPaused) then
      begin
        if _isonline then
           begin
-            _onlinestopped := true;
-            BASS_StreamFree(bassChannel);
-            bassChannel := 0;
+            if (not _onlinestopped) then
+               begin
+                 _onlinestopped := true;
+                 BASS_StreamFree(bassStreamHandle);
+                 bassStreamHandle := 0;
+               end;
           end
-       else if (int_GetStatus = ssPlaying) then
-          BASS_ChannelPause(bassChannel);
+       else if (currStatus = ssPlaying) then
+          BASS_ChannelPause(bassStreamHandle);
      end
   else if (st = ssPlaying) then
      begin
-       if (int_GetStatus = ssStopped) then
-          InternalPlayTrack
-       else if (int_GetStatus = ssPaused) then
+       if _isonline then
           begin
-            if _isonline then
-               InternalPlayTrack
-            else
-               BASS_ChannelPlay(bassChannel, BOOL(0));
+            if _onlinestopped then
+               begin
+                 _onlinestopped := false;
+                 lst := OnlineLoadingList.LockList;
+                 try
+                   if (lst.IndexOf(Pointer(Self)) < 0) then
+                      begin
+                        lst.Add(Pointer(Self));
+                        TThread.ExecuteInThread(@InitOnlineStream, Pointer(Self), nil);
+                      end;
+                 finally
+                   OnlineLoadingList.UnlockList;
+                 end;
+               end;
+          end
+       else if (currStatus = ssPaused) then
+          begin
+            BASS_ChannelPlay(bassStreamHandle, BOOL(0));
+            int_SetVolume(_vol);
+          end
+       else if (currStatus <> ssPlaying) then
+          begin
+            BASS_ChannelPlay(bassStreamHandle, BOOL(1));
+            int_SetVolume(_vol);
           end;
      end
-  else if (st = ssStopped) then
+  else
      begin
        if _isonline then
           begin
-            _onlinestopped := true;
-            BASS_StreamFree(bassChannel);
-            bassChannel := 0;
+            if (not _onlinestopped) then
+               begin
+                 _onlinestopped := true;
+                 BASS_StreamFree(bassStreamHandle);
+                 bassStreamHandle := 0;
+               end;
           end
-       else if (int_GetStatus in [ssPlaying, ssPaused]) then
-          BASS_ChannelStop(bassChannel);
+       else if (currStatus in [ssPlaying, ssPaused]) then
+          BASS_ChannelStop(bassStreamHandle);
      end;
 end;
 
 procedure TPlayableAudioTrack.int_SetVolume(vol: double);
 begin
   _vol := NormalizeFloat(vol, 0.0, 1.0);
-  if not (int_GetStatus in [ssNone, ssError, ssStopped]) then
-     begin
-       if _isonline and (bassChannel = 0) then
-          exit;
-       BASS_ChannelSetAttribute(bassChannel, BASS_ATTRIB_VOL, _vol);
-     end;
+  if (int_GetStatus in [ssPlaying, ssPaused]) then
+     BASS_ChannelSetAttribute(bassStreamHandle, BASS_ATTRIB_VOL, _vol);
 end;
 
 function TPlayableAudioTrack.int_GetLengthMs: integer;
-var
-  info: BASS_SAMPLE;
 begin
   if _isonline then
      exit(-1);
   if (int_GetStatus in [ssNone, ssError]) then
      exit(0);
-  BASS_SampleGetInfo(bassSample, info);
-  Result := round(BASS_ChannelBytes2Seconds(bassSample, info.length) * 1000);
+  Result := round(BASS_ChannelBytes2Seconds(bassStreamHandle, BASS_ChannelGetLength(bassStreamHandle, BASS_POS_BYTE)) * 1000);
 end;
 
 function TPlayableAudioTrack.int_GetPositionMs: integer;
@@ -237,7 +222,7 @@ begin
      exit(-1);
   if (int_GetStatus in [ssNone, ssError, ssStopped]) then
      exit(0);
-  Result := round(BASS_ChannelBytes2Seconds(bassChannel, BASS_ChannelGetPosition(bassChannel, BASS_POS_BYTE)) * 1000);
+  Result := round(BASS_ChannelBytes2Seconds(bassStreamHandle, BASS_ChannelGetPosition(bassStreamHandle, BASS_POS_BYTE)) * 1000);
 end;
 
 procedure TPlayableAudioTrack.int_SetPositionMs(pos: integer);
@@ -247,47 +232,43 @@ begin
   if (pos > int_GetLengthMs) then
      exit;
   if (int_GetStatus in [ssPlaying, ssPaused]) then
-     BASS_ChannelSetPosition(bassChannel, BASS_ChannelSeconds2Bytes(bassChannel, pos / 1000), BASS_POS_BYTE);
+     BASS_ChannelSetPosition(bassStreamHandle, BASS_ChannelSeconds2Bytes(bassStreamHandle, pos / 1000), BASS_POS_BYTE);
 end;
 
 constructor TPlayableAudioTrack.Create(fn: string);
-var
-  _dummystream: TMemoryStream;
 begin
   inherited Create;
   _status := ssNone;
   _errno := 0;
   _vol := 1.0;
   _filename := fn;
+  _dummystream := nil;
   if IsNetFile(_filename) then
      begin
        _isonline := true;
-       _onlinestopped := false;
-       bassChannel := 0;
+       _onlinestopped := true;
+       bassStreamHandle := 0;
      end
   else
      begin
        _isonline := false;
-       bassSample := BASS_SampleLoad(BOOL(0), PChar(_filename), 0, 0, 1, 0);
-       if (bassSample = 0) then
+       bassStreamHandle := BASS_StreamCreateFile(BOOL(0), PChar(_filename), 0, 0, BASS_STREAM_PRESCAN);
+       if (bassStreamHandle = 0) then
           begin
             // Files with invalid names often cannot be loaded directly. We try to use the Memory-based approach.
             _dummystream := TMemoryStream.Create;
             try
-              try
-                if FileExists(_filename) then
-                   begin
-                     _dummystream.LoadFromFile(_filename); // This can result in a non-continuable exception, if the file doesn't exist!
-                     bassSample := BASS_SampleLoad(BOOL(1), _dummystream.Memory, 0, _dummystream.Size, 1, 0);
-                   end;
-              finally
-                _dummystream.Free;
-              end;
+              if FileExists(_filename) then
+                 begin
+                   _dummystream.LoadFromFile(_filename); // This can result in a non-continuable exception, if the file doesn't exist!
+                   bassStreamHandle := BASS_StreamCreateFile(BOOL(1), _dummystream.Memory, 0, _dummystream.Size, BASS_STREAM_PRESCAN);
+                 end;
             except
-              bassSample := 0;
+              bassStreamHandle := 0;
             end;
-            if (bassSample = 0) then
+            if (bassStreamHandle = 0) then
                begin
+                 FreeAndNil(_dummystream); // It's unnecessary to keep the invalid stream then...
                  _status := ssError;
                  _errno := BASS_ErrorGetCode;
                  LogError(Format('Failed to load ''%s''! Error: %s', [_filename, GetErrorInfo]));
@@ -312,11 +293,11 @@ begin
        finally
          OnlineLoadingList.UnlockList;
        end;
-       if (bassChannel <> 0) then
-          BASS_StreamFree(bassChannel);
-     end
-  else if (_status <> ssError) then
-     BASS_SampleFree(bassSample);
+     end;
+  if (bassStreamHandle <> 0) then
+     BASS_StreamFree(bassStreamHandle);
+  if Assigned(_dummystream) then
+     FreeAndNil(_dummystream);
   inherited;
 end;
 
@@ -327,7 +308,7 @@ begin
        _onlinestopped := true;
        _status := ssStopped;
        _errno := 0;
-       bassChannel := 0;
+       bassStreamHandle := 0;
      end;
 end;
 
@@ -375,7 +356,7 @@ begin
        47: Result := 'BASS_ERROR_UNSTREAMABLE';
        48: Result := 'BASS_ERROR_PROTOCOL';
        49: Result := 'BASS_ERROR_DENIED';
-       else Result := 'BASS_ERROR_UNKNOWN';
+       else Result := Format('BASS Error %d', [_errno]);
   end;
 end;
 
@@ -384,7 +365,9 @@ initialization
   BASS_Init(-1, 44100, BASS_DEVICE_NOSPEAKER, {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF}, nil);
   BASS_SetConfig(BASS_CONFIG_NET_PLAYLIST, 1);
   BASS_SetConfig(BASS_CONFIG_NET_PREBUF_WAIT, 0);
+  BASS_SetConfig(71{BASS_CONFIG_NET_META}, 0);
   BASS_SetConfigPtr(BASS_CONFIG_NET_PROXY, nil);
+  BASS_SetConfigPtr(BASS_CONFIG_NET_AGENT, PChar('X4 ORS Playback Controller Application'));
 
 finalization
   BASS_Stop;

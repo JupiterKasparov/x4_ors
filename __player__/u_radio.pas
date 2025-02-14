@@ -71,7 +71,7 @@ type
     procedure SetRandomPos(MaxRandomPos: double);
     procedure ReplayCurrTrack;
     procedure SkipNextTrack;
-    procedure Process(newVolume: double; playbackStatus: TSongStatus; bIsActiveSlot: boolean);
+    procedure Process(newVolume: double; playbackStatus: TSongStatus; currentTime: qword; bIsActiveSlot: boolean);
     procedure GenerateReport(lst: TStrings; indentationLevel: integer);
     property IsMP3Slot: boolean read _ismp3;
     property LoudnessFactor: double read _lf;
@@ -85,13 +85,12 @@ type
   TRadioStation = class
   private
     _slots: TRadioStationSlotList;
-    _data: PFactionDistanceDataArray;
     _rsname: string;
     _status: TRadioStatus;
     _volume: double;
     _mastervol: double;
     procedure int_SetMasterVol(vol: double);
-    procedure int_AdjustSuppression(index, loudestIndex: integer; loudestVolume: double);
+    procedure int_AdjustSuppression(factionData: PFactionDistanceDataArray; index, loudestIndex: integer; loudestVolume: double);
   public
     constructor Create;
     constructor Create(files: TStrings; loudFactor: double);
@@ -103,7 +102,7 @@ type
     procedure SetRandomPos(MaxRandomPos: double);
     procedure SkipNextTrack;
     procedure ReplayCurrTrack;
-    procedure Process(DistanceData: PFactionDistanceDataArray; Volume: double; CurrentStatus: TRadioStatus; IsActiveRadio: boolean);
+    procedure Process(factionData: PFactionDistanceDataArray; newVolume: double; playbackStatus: TRadioStatus; currentTime: qword; bIsActiveRadio: boolean);
     procedure GenerateReport(lst: TStrings; indentationLevel: integer);
     property Status: TRadioStatus read _status;
     property RadioStationName: string read _rsname write _rsname;
@@ -344,7 +343,7 @@ begin
      _tracks.Add(TRadioStationSlotTrack.Create(track))
   else
      track.Free;
-  Process(0.0, ssStopped, false);
+  Process(0.0, ssStopped, 0, false);
 end;
 
 constructor TRadioStationSlot.Create(ownerList: TStringArray; track: TPlayableAudioTrack; loudFactor, dampFactor: double);
@@ -358,7 +357,7 @@ begin
   _suppression := 0.0;
   if (track.Status <> ssError) then
      _tracks.Add(TRadioStationSlotTrack.Create(track));
-  Process(0.0, ssStopped, false);
+  Process(0.0, ssStopped, 0, false);
 end;
 
 constructor TRadioStationSlot.Create(files: TStrings; loudFactor: double);
@@ -382,7 +381,7 @@ begin
         else
            track.Free;
       end;
-  Process(0.0, ssStopped, false);
+  Process(0.0, ssStopped, 0, false);
 end;
 
 destructor TRadioStationSlot.Destroy;
@@ -484,19 +483,13 @@ end;
 procedure TRadioStationSlot.SkipNextTrack;
 begin
   if _ismp3 and IsValid then
-     begin
-       _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive);
-       Process(_volume, _status, _isactive);
-     end;
+     _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive); // This just stops the current MP3, a subsequent 'Process' call will skip to the next MP3.
 end;
 
-procedure TRadioStationSlot.Process(newVolume: double; playbackStatus: TSongStatus; bIsActiveSlot: boolean);
+procedure TRadioStationSlot.Process(newVolume: double; playbackStatus: TSongStatus; currentTime: qword; bIsActiveSlot: boolean);
 var
-  currentTime: qword;
   i: integer;
 begin
-  currentTime := GetTickCount64;
-
   // Setup data
   _volume := NormalizeFloat(newVolume, 0.0, 1.0);
   if (playbackStatus = ssError) or (playbackStatus = ssNone) then
@@ -570,7 +563,7 @@ begin
   _mastervol := NormalizeFloat(vol, 0.0, 1.0);
 end;
 
-procedure TRadioStation.int_AdjustSuppression(index, loudestIndex: integer; loudestVolume: double);
+procedure TRadioStation.int_AdjustSuppression(factionData: PFactionDistanceDataArray; index, loudestIndex: integer; loudestVolume: double);
 var
   locLoudFactor, locDampFactor, distance, step, adjustment: double;
 begin
@@ -580,7 +573,7 @@ begin
   loudestVolume := NormalizeFloat(loudestVolume, 0.0, 1.0);
 
   // Calculate adjustment
-  distance := NormalizeFloat(_slots[loudestIndex].GetClosestDistance(_data), 1.0, 1000000.0); // Limit to valid range
+  distance := NormalizeFloat(_slots[loudestIndex].GetClosestDistance(factionData), 1.0, 1000000.0); // Limit to valid range
   step := locLoudFactor * locDampFactor * distance;
   if (step < 0.001) then
      step := 0.001; // Limit to valid range
@@ -600,7 +593,7 @@ begin
   _slots := TRadioStationSlotList.Create;
   _rsname := '';
   _mastervol := 0.0;
-  Process(nil, 0.0, rsPlaying, false);
+  Process(nil, 0.0, rsPaused, 0, false);
 end;
 
 constructor TRadioStation.Create(files: TStrings; loudFactor: double);
@@ -610,7 +603,7 @@ begin
   _rsname := '';
   _mastervol := loudFactor;
   _slots.Add(TRadioStationSlot.Create(files, 1.0));
-  Process(nil, 0.0, rsPlaying, false);
+  Process(nil, 0.0, rsPaused, 0, false);
 end;
 
 destructor TRadioStation.Destroy;
@@ -711,7 +704,7 @@ begin
       _slots[i].ReplayCurrTrack;
 end;
 
-procedure TRadioStation.Process(DistanceData: PFactionDistanceDataArray; Volume: double; CurrentStatus: TRadioStatus; IsActiveRadio: boolean);
+procedure TRadioStation.Process(factionData: PFactionDistanceDataArray; newVolume: double; playbackStatus: TRadioStatus; currentTime: qword; bIsActiveRadio: boolean);
 var
   i, locLoudestIndex: integer;
   locVol, locCalcVol, locLoudestVol, locSlotVol: double;
@@ -720,29 +713,28 @@ begin
      exit;
 
   // Store external data
-  _data := DistanceData;
-  if (CurrentStatus = rsError) then
-     CurrentStatus := rsPaused;
+  if (playbackStatus = rsError) then
+     playbackStatus := rsPaused;
   if (_status <> rsError) then
-     _status := CurrentStatus;
-  _volume := NormalizeFloat(Volume, 0.0, 1.0);
+     _status := playbackStatus;
+  _volume := NormalizeFloat(newVolume, 0.0, 1.0);
   locVol := _volume * _mastervol;
 
   // Process
   if (_status = rsPaused) then
      begin
        for i := 0 to _slots.Count - 1 do
-           _slots[i].Process(0.0, ssPaused, IsActiveRadio);
+           _slots[i].Process(0.0, ssPaused, currentTime, bIsActiveRadio);
      end
   else if (_status = rsPlaying) then
      begin
-       if IsActiveRadio then
+       if bIsActiveRadio then
           begin
             locLoudestIndex := 0;
             locLoudestVol := 0;
             for i := 0 to _slots.Count - 1 do
                 begin
-                  locSlotVol := _slots[i].GetBaseVolume(_data);
+                  locSlotVol := _slots[i].GetBaseVolume(factionData);
                   if (locSlotVol > locLoudestVol) then
                      begin
                        locLoudestVol := locSlotVol;
@@ -751,14 +743,14 @@ begin
                 end;
             for i := 0 to _slots.Count - 1 do
                 begin
-                  locSlotVol := _slots[i].GetBaseVolume(_data);
+                  locSlotVol := _slots[i].GetBaseVolume(factionData);
                   if (locLoudestVol > 0.0) then
                      locCalcVol := power(locSlotVol / locLoudestVol, 8.75) * locSlotVol
                   else
                      locCalcVol := locSlotVol;
-                  int_AdjustSuppression(i, locLoudestIndex, locLoudestVol);
+                  int_AdjustSuppression(factionData, i, locLoudestIndex, locLoudestVol);
                   locCalcVol := locCalcVol - _slots[i]._suppression;
-                  _slots[i].Process(locCalcVol * locVol, ssPlaying, true);
+                  _slots[i].Process(locCalcVol * locVol, ssPlaying, currentTime, true);
                 end;
           end
        else
@@ -766,14 +758,14 @@ begin
             for i := 0 to _slots.Count - 1 do
                 begin
                   _slots[i]._suppression := 0.0;
-                  _slots[i].Process(0.0, ssPlaying, false);
+                  _slots[i].Process(0.0, ssPlaying, currentTime, false);
                 end;
           end;
      end
   else
      begin
        for i := 0 to _slots.Count - 1 do
-           _slots[i].Process(0.0, ssStopped, false);
+           _slots[i].Process(0.0, ssStopped, currentTime, false);
      end;
 end;
 
