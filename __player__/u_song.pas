@@ -5,7 +5,7 @@ unit u_song;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, BASS, u_utils, fgl, u_logger;
+  Classes, SysUtils, BASS, u_utils, fgl, u_logger;
 
 type
   TSongStatus = (ssNone, ssStopped, ssPaused, ssPlaying, ssError);
@@ -202,7 +202,7 @@ end;
 
 procedure TPlayableAudioTrack.int_SetVolume(vol: double);
 begin
-  _vol := NormalizeFloat(vol, 0.0, 1.0);
+  _vol := Clamp(vol, 0.0, 1.0);
   if (int_GetStatus in [ssPlaying, ssPaused]) then
      BASS_ChannelSetAttribute(bassStreamHandle, BASS_ATTRIB_VOL, _vol);
 end;

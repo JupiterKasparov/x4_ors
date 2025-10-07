@@ -1,5 +1,9 @@
 library X4_ORS;
 
+{$IFNDEF WIN64}
+  {$ERROR This addon will only work on 64-bit Windows!}
+{$ENDIF}
+
 {$MODE OBJFPC}
 {$H+}
 {$PACKRECORDS C}
@@ -7,7 +11,7 @@ library X4_ORS;
 {$R *.res}
 
 uses
-  SysUtils, strutils, Windows, ctypes, lua;
+  Windows, SysUtils, strutils, ctypes, lua;
 
 type
   UniverseID = cuint64;
@@ -97,6 +101,7 @@ begin
   internal_FreeMemBuf;
   Result := 0;
 end;
+
 function GetFactionDataString(L: PLua_State): cint; cdecl;
 var
   i, j: integer;
@@ -367,7 +372,6 @@ begin
        exit(3);
      end;
 end;
-
 
 // Registers funcs
 function init(L: PLua_State): cint; cdecl;

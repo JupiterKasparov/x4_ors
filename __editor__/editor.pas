@@ -23,9 +23,15 @@ type
     BtkSkipMP3: TButton;
     GbrStationProps: TGroupBox;
     GbrSlotProps: TGroupBox;
+    LbrSlotOrderMP3: TLabel;
+    LbrSlotUseOrderMP3: TLabel;
+    PrSlotMP3OnlyProps: TPanel;
+    RvSlotOrderMP3: TMemo;
+    RvSlotUseMP3: TComboBox;
     LbrName: TLabel;
     LbrSelectSlot: TLabel;
     LbrSlotEffectiveRange: TLabel;
+    LbrSlotUseMP3: TLabel;
     LbrSlotFileName: TLabel;
     LbrSlotCount: TLabel;
     LbrMasterLoudnessFactor: TLabel;
@@ -56,7 +62,7 @@ type
     LbgLatency: TLabel;
     LbgNoOfStations: TLabel;
     LbkModifier1: TLabel;
-    BtkvModifier1: TLabel;
+    LbkvModifier1: TLabel;
     LbkModifier2: TLabel;
     LbkvModifier2: TLabel;
     LbkNextStation: TLabel;
@@ -79,6 +85,7 @@ type
     RvSlotCount: TSpinEdit;
     RvSlotLoudnessFactor: TTrackBar;
     RvSlotOwnerList: TEdit;
+    RvSlotUseOrderMP3: TComboBox;
     TmrUpdate: TTimer;
     GvLoudnessFactor: TTrackBar;
     procedure ev_CanClose(Sender: TObject; var CanClose: boolean);
@@ -92,12 +99,15 @@ type
     procedure ev_Change_mEnable(Sender: TObject);
     procedure ev_Change_mLoudnessFactor(Sender: TObject);
     procedure ev_Change_mName(Sender: TObject);
+    procedure ev_Change_rIsMP3(Sender: TObject);
     procedure ev_Change_rLoudnessFactor(Sender: TObject);
     procedure ev_Change_rName(Sender: TObject);
+    procedure ev_Change_rOrderMP3(Sender: TObject);
     procedure ev_Change_rSlotCount(Sender: TObject);
     procedure ev_Change_rSlotDampeningFactor(Sender: TObject);
     procedure ev_Change_rSlotFileName(Sender: TObject);
     procedure ev_Change_rSlotLoudnessFactor(Sender: TObject);
+    procedure ev_Change_rSlotOrderMP3(Sender: TObject);
     procedure ev_Change_rSlotOwnerList(Sender: TObject);
     procedure ev_Draw(Sender: TObject);
     procedure ev_Free(Sender: TObject);
@@ -211,8 +221,8 @@ end;
 
 procedure TFrmEditor.ev_Change_gNoOfStations(Sender: TObject);
 var
-  stationcount, i: integer;
-  section: string;
+  stationcount, i, j, slotcount: integer;
+  section, key: string;
 begin
   if doUpdateIni and Assigned(settings) then
      try
@@ -222,6 +232,22 @@ begin
           for i := GvNoOfStations.Value + 1 to stationcount do
               begin
                 section := Format('Radio_%d', [i]);
+                slotcount := settings.ReadInteger(section, 'SlotCount', 0);
+                if (slotcount > 0) then
+                   begin
+                     for j := 1 to slotcount do
+                         begin
+                           key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [i, j]);
+                           if FileExists(key) then
+                              SysUtils.DeleteFile(key);
+                         end;
+                   end
+                else
+                   begin
+                     key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [i]);
+                     if FileExists(key) then
+                        SysUtils.DeleteFile(key);
+                   end;
                 if settings.SectionExists(section) then
                    settings.EraseSection(section);
               end;
@@ -384,6 +410,31 @@ begin
      end;
 end;
 
+procedure TFrmEditor.ev_Change_rIsMP3(Sender: TObject);
+var
+  section, key: string;
+begin
+  PrSlotMP3OnlyProps.Enabled := RvSlotUseMP3.ItemIndex > 0;
+  if doUpdateIni and Assigned(settings) then
+     try
+       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
+       if (RvSlotCount.Value > 0) then
+          key := Format('SlotIsMP3_%d', [RvSelectSlot.ItemIndex + 1])
+       else
+          key := 'IsMP3';
+       if (RvSlotUseMP3.ItemIndex = 0) then
+          settings.WriteInteger(section, key, 0)
+       else
+          settings.WriteInteger(section, key, 1);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
+     except
+       ShowWriteFailedError;
+     end;
+  if Assigned(RvSlotUseOrderMP3.OnChange) then
+     RvSlotUseOrderMP3.OnChange(RvSlotUseOrderMP3);
+end;
+
 procedure TFrmEditor.ev_Change_rLoudnessFactor(Sender: TObject);
 var
   section: string;
@@ -417,9 +468,44 @@ begin
      end;
 end;
 
+procedure TFrmEditor.ev_Change_rOrderMP3(Sender: TObject);
+var
+  section, key, key2: string;
+begin
+  RvSlotOrderMP3.Enabled := RvSlotUseOrderMP3.ItemIndex > 0;
+  if (RvSlotUseOrderMP3.ItemIndex < 1) or (RvSlotUseMP3.ItemIndex < 1) then
+     RvSlotOrderMP3.Lines.Clear;
+  if doUpdateIni and Assigned(settings) then
+     try
+       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
+       if (RvSlotCount.Value > 0) then
+          begin
+            key := Format('SlotOrdered_%d', [RvSelectSlot.ItemIndex + 1]);
+            key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1]);
+          end
+       else
+          begin
+            key := 'Ordered';
+            key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
+          end;
+       if (RvSlotUseOrderMP3.ItemIndex < 1) or (RvSlotUseMP3.ItemIndex < 1) then
+          begin
+            settings.WriteInteger(section, key, 0);
+            if FileExists(key2) then
+               SysUtils.DeleteFile(key2);
+          end
+       else
+          settings.WriteInteger(section, key, 1);
+       if settings.SectionExists('Radio_0') then
+          settings.EraseSection('Radio_0');
+     except
+       ShowWriteFailedError;
+     end;
+end;
+
 procedure TFrmEditor.ev_Change_rSlotCount(Sender: TObject);
 var
-  section, key: string;
+  section, key, key2: string;
   slotcount, i: integer;
 begin
   if doUpdateIni and Assigned(settings) then
@@ -439,6 +525,16 @@ begin
             settings.DeleteKey(section, 'SlotLoudnessFactor_1');
             settings.WriteFloat(section, 'DampeningFactor', settings.ReadFloat(section, 'SlotDampeningFactor_1', 1.0));
             settings.DeleteKey(section, 'SlotDampeningFactor_1');
+            settings.WriteFloat(section, 'IsMP3', settings.ReadFloat(section, 'SlotIsMP3_1', 1.0));
+            settings.DeleteKey(section, 'SlotIsMP3_1');
+            settings.WriteFloat(section, 'Ordered', settings.ReadFloat(section, 'SlotOrdered_1', 1.0));
+            settings.DeleteKey(section, 'SlotOrdered_1');
+            key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_1_order.lst', [RvSelectStation.ItemIndex + 1]);
+            if FileExists(key) then
+               begin
+                 key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
+                 RenameFile(key, key2);
+               end;
           end
        else if (RvSlotCount.Value > 0) and (slotcount = 0) then
           begin
@@ -451,6 +547,14 @@ begin
             settings.DeleteKey(section, 'Owner');
             settings.WriteFloat(section, 'SlotLoudnessFactor_1', 1.0);
             settings.WriteFloat(section, 'SlotDampeningFactor_1', settings.ReadFloat(section, 'DampeningFactor', 1.0));
+            settings.WriteFloat(section, 'SlotIsMP3_1', settings.ReadFloat(section, 'IsMP3', 1.0));
+            settings.WriteFloat(section, 'SlotOrdered_1', settings.ReadFloat(section, 'Ordered', 1.0));
+            key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
+            if FileExists(key) then
+               begin
+                 key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_1_order.lst', [RvSelectStation.ItemIndex + 1]);
+                 RenameFile(key, key2);
+               end;
           end;
        if (RvSlotCount.Value < slotcount) then
           for i := RvSlotCount.Value + 1 to slotcount do
@@ -463,6 +567,13 @@ begin
                 settings.DeleteKey(section, key);
                 key := Format('SlotDampeningFactor_%d', [i]);
                 settings.DeleteKey(section, key);
+                key := Format('SlotIsMP3_%d', [i]);
+                settings.DeleteKey(section, key);
+                key := Format('SlotOrdered_%d', [i]);
+                settings.DeleteKey(section, key);
+                key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, i]);
+                if FileExists(key) then
+                   SysUtils.DeleteFile(key);
               end;
        if settings.SectionExists('Radio_0') then
           settings.EraseSection('Radio_0');
@@ -542,6 +653,22 @@ begin
        settings.WriteFloat(section, key, RvSlotLoudnessFactor.Position / 100.0);
        if settings.SectionExists('Radio_0') then
           settings.EraseSection('Radio_0');
+     except
+       ShowWriteFailedError;
+     end;
+end;
+
+procedure TFrmEditor.ev_Change_rSlotOrderMP3(Sender: TObject);
+var
+  key: string;
+begin
+  if doUpdateIni and Assigned(settings) then
+     try
+       if (RvSlotCount.Value > 0) then
+          key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1])
+       else
+          key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
+       RvSlotOrderMP3.Lines.SaveToFile(key);
      except
        ShowWriteFailedError;
      end;
@@ -696,10 +823,11 @@ var
   locAllowUpdates: boolean;
   section, key: string;
   fvalue: double;
+  ivalue: integer;
 begin
   locAllowUpdates := doUpdateIni;
   doUpdateIni := false;
-  PrSlotOnlyProps.Visible := RvSlotCount.Value > 0;
+  PrSlotOnlyProps.Enabled := RvSlotCount.Value > 0;
   section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
   if Assigned(settings) and settings.SectionExists(section) then
      begin
@@ -725,6 +853,24 @@ begin
               else if (fvalue > 0.99998) then
                  fvalue := 0.99998;
               RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
+              key := Format('SlotIsMP3_%d', [RvSelectSlot.ItemIndex + 1]);
+              ivalue := settings.ReadInteger(section, key, 0);
+              if (ivalue <= 0) then
+                 RvSlotUseMP3.ItemIndex := 0
+              else
+                 RvSlotUseMP3.ItemIndex := 1;
+              key := Format('SlotOrdered_%d', [RvSelectSlot.ItemIndex + 1]);
+              ivalue := settings.ReadInteger(section, key, 0);
+              if (ivalue <= 0) or (RvSlotUseMP3.ItemIndex < 1) then
+                 RvSlotUseOrderMP3.ItemIndex := 0
+              else
+                 RvSlotUseOrderMP3.ItemIndex := 1;
+              RvSlotOrderMP3.Lines.Clear;
+              if (RvSlotUseMP3.ItemIndex > 0) and (RvSlotUseOrderMP3.ItemIndex > 0) then
+                 begin
+                   key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1]);
+                   RvSlotOrderMP3.Lines.LoadFromFile(key);
+                 end;
             end
          else
             begin
@@ -736,6 +882,24 @@ begin
               else if (fvalue > 0.99998) then
                  fvalue := 0.99998;
               RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
+              key := 'IsMP3';
+              ivalue := settings.ReadInteger(section, key, 0);
+              if (ivalue <= 0) then
+                 RvSlotUseMP3.ItemIndex := 0
+              else
+                 RvSlotUseMP3.ItemIndex := 1;
+              key := 'Ordered';
+              ivalue := settings.ReadInteger(section, key, 0);
+              if (ivalue <= 0) or (RvSlotUseMP3.ItemIndex < 1) then
+                 RvSlotUseOrderMP3.ItemIndex := 0
+              else
+                 RvSlotUseOrderMP3.ItemIndex := 1;
+              RvSlotOrderMP3.Lines.Clear;
+              if (RvSlotUseMP3.ItemIndex > 0) and (RvSlotUseOrderMP3.ItemIndex > 0) then
+                 begin
+                   key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
+                   RvSlotOrderMP3.Lines.LoadFromFile(key);
+                 end;
             end;
          if settings.SectionExists('Radio_0') then
             settings.EraseSection('Radio_0');
@@ -744,9 +908,13 @@ begin
          RvSlotOwnerList.Text := '';
          RvSlotLoudnessFactor.Position := 0;
          RvSlotEffectiveRange.Value := RvSlotEffectiveRange.MaxValue;
+         RvSlotUseMP3.ItemIndex := 0;
+         RvSlotUseOrderMP3.ItemIndex := 0;
+         RvSlotOrderMP3.Lines.Clear;
        end;
      end;
-
+  if Assigned(RvSlotUseMP3.OnChange) then
+     RvSlotUseMP3.OnChange(RvSlotUseMP3);
   if locAllowUpdates then
      doUpdateIni := true;
 end;
@@ -803,7 +971,7 @@ procedure TFrmEditor.ev_Update(Sender: TObject);
 begin
   if PgEditorPages.Visible and (PgEditorPages.TabIndex = 1) then
      begin
-       BtkvModifier1.Caption := StandardKeyToStringW(Handle, keys[1]);
+       LbkvModifier1.Caption := StandardKeyToStringW(Handle, keys[1]);
        LbkvModifier2.Caption := StandardKeyToStringW(Handle, keys[2]);
        LbkvPrevStation.Caption := StandardKeyToStringW(Handle, keys[3]);
        LbkvNextStation.Caption := StandardKeyToStringW(Handle, keys[4]);

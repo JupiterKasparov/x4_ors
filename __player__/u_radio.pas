@@ -1,6 +1,8 @@
 unit u_radio;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}
+{$H+}
+{$MODESWITCH AdvancedRecords+}
 
 interface
 
@@ -62,7 +64,7 @@ type
     _suppression: double; // Helps improve overlapping radio stations slots over time!
     constructor Create(ownerList: TStringArray; fileName: string; loudFactor, dampFactor: double);
     constructor Create(ownerList: TStringArray; track: TPlayableAudioTrack; loudFactor, dampFactor: double);
-    constructor Create(files: TStrings; loudFactor: double); // Dedicated MP3 player slot
+    constructor Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double);
     destructor Destroy; override;
     function GetBaseVolume(factionData: PFactionDistanceDataArray): double; // Based solely on faction ownerships and distances
     function GetClosestDistance(factionData: PFactionDistanceDataArray): double; // Based solely on faction ownerships and distances
@@ -93,11 +95,11 @@ type
     procedure int_AdjustSuppression(factionData: PFactionDistanceDataArray; index, loudestIndex: integer; loudestVolume: double);
   public
     constructor Create;
-    constructor Create(files: TStrings; loudFactor: double);
     destructor Destroy; override;
     function CheckSlotOwnerListCompatibility(lst: TStringArray): boolean;
     function AddRadioSlot(Owners: TStringArray; FileName: string; LoudnessFactor, DampeningFactor: double): boolean;
     function AddRadioSlot(Owners: TStringArray; Track: TPlayableAudioTrack; LoudnessFactor, DampeningFactor: double): boolean;
+    function AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double): boolean;
     function IsValid: boolean;
     procedure SetRandomPos(MaxRandomPos: double);
     procedure SkipNextTrack;
@@ -109,9 +111,20 @@ type
     property MasterVolume: double read _mastervol write int_SetMasterVol;
   end;
 
-  TRadioStationList = specialize TFPGList<TRadioStation>;
+  TRadioStationInfo = record
+    RadioStation: TRadioStation;
+    IsDedicatedMP3Player: boolean;
+    class operator = (a, b: TRadioStationInfo): boolean;
+  end;
+
+  TRadioStationList = specialize TFPGList<TRadioStationInfo>;
 
 implementation
+
+class operator TRadioStationInfo .= (a, b: TRadioStationInfo): boolean;
+begin
+  Result := (a.RadioStation = b.RadioStation);
+end;
 
 {################
  TRadioStationSlotTrack
@@ -193,7 +206,7 @@ begin
   st := int_GetStatus; // It is important, that we query this BEFORE setting _isactive
   wasActive := _isactive;
   _isactive := active;
-  _volume := NormalizeFloat(newVolume, 0.0, 1.0);
+  _volume := Clamp(newVolume, 0.0, 1.0);
 
   // Status code check and update
   if (st <> ssError) then
@@ -360,17 +373,17 @@ begin
   Process(0.0, ssStopped, 0, false);
 end;
 
-constructor TRadioStationSlot.Create(files: TStrings; loudFactor: double);
+constructor TRadioStationSlot.Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double);
 var
   i: integer;
   track: TPlayableAudioTrack;
 begin
   _ismp3 := true;
   _mp3index := 0;
-  SetLength(_owners, 0);
+  _owners := Copy(ownerList);
   _tracks := TRadioStationSlotTrackList.Create;
   _lf := loudFactor;
-  _df := 1.0;
+  _df := dampFactor;
   _isactive := false;
   _suppression := 0.0;
   for i := 0 to files.Count - 1 do
@@ -400,7 +413,7 @@ var
   i, j: integer;
   d: double;
 begin
-  if _ismp3 or (not IsValid) or (Length(_owners) = 0) or (factionData = nil) then
+  if (not IsValid) or (Length(_owners) = 0) or (factionData = nil) then
      exit(1.0);
 
   // Calculates the desired volume level, based on faction ownerships, distances, and dampening factor
@@ -424,7 +437,7 @@ var
   i, j: integer;
   d: double;
 begin
-  if _ismp3 or (not IsValid) or (Length(_owners) = 0) or (factionData = nil) then
+  if (not IsValid) or (Length(_owners) = 0) or (factionData = nil) then
      exit(1.0);
 
   // Calculate the closest distance
@@ -443,9 +456,6 @@ function TRadioStationSlot.CheckOwnerListCompatibility(lst: TStringArray): boole
 var
   i, j: integer;
 begin
-  if _ismp3 then
-     exit(false); // MP3 is never compatible
-
   if (Length(_owners) = 0) or (Length(lst) = 0) then
      exit(false); // Empty owner lists collide with everything
 
@@ -470,8 +480,16 @@ end;
 
 procedure TRadioStationSlot.SetRandomPos(MaxRandomPos: double);
 begin
-  if (not _ismp3) and IsValid then
-     _tracks[0].PositionMs := round(random * _tracks[0].LengthMs * MaxRandomPos);
+  if IsValid then
+     begin
+       if _ismp3 then
+          begin
+            _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive); // This just stops the current MP3, a subsequent 'Process' call will skip to the next MP3.
+            _mp3index := random(_tracks.Count);
+          end
+       else
+          _tracks[0].PositionMs := round(random * _tracks[0].LengthMs * MaxRandomPos);
+     end;
 end;
 
 procedure TRadioStationSlot.ReplayCurrTrack;
@@ -491,7 +509,7 @@ var
   i: integer;
 begin
   // Setup data
-  _volume := NormalizeFloat(newVolume, 0.0, 1.0);
+  _volume := Clamp(newVolume, 0.0, 1.0);
   if (playbackStatus = ssError) or (playbackStatus = ssNone) then
      playbackStatus := ssStopped;
   _status := playbackStatus;
@@ -560,7 +578,7 @@ end;
 
 procedure TRadioStation.int_SetMasterVol(vol: double);
 begin
-  _mastervol := NormalizeFloat(vol, 0.0, 1.0);
+  _mastervol := Clamp(vol, 0.0, 1.0);
 end;
 
 procedure TRadioStation.int_AdjustSuppression(factionData: PFactionDistanceDataArray; index, loudestIndex: integer; loudestVolume: double);
@@ -568,23 +586,23 @@ var
   locLoudFactor, locDampFactor, distance, step, adjustment: double;
 begin
   // Limit input to valid ranges
-  locLoudFactor := NormalizeFloat(_slots[loudestIndex].LoudnessFactor, 0.01, 1.0);
-  locDampFactor := NormalizeFloat(_slots[loudestIndex].DampeningFactor, 0.01, 1.0);
-  loudestVolume := NormalizeFloat(loudestVolume, 0.0, 1.0);
+  locLoudFactor := Clamp(_slots[loudestIndex].LoudnessFactor, 0.01, 1.0);
+  locDampFactor := Clamp(_slots[loudestIndex].DampeningFactor, 0.01, 1.0);
+  loudestVolume := Clamp(loudestVolume, 0.0, 1.0);
 
   // Calculate adjustment
-  distance := NormalizeFloat(_slots[loudestIndex].GetClosestDistance(factionData), 1.0, 1000000.0); // Limit to valid range
+  distance := Clamp(_slots[loudestIndex].GetClosestDistance(factionData), 1.0, 1000000.0); // Limit to valid range
   step := locLoudFactor * locDampFactor * distance;
   if (step < 0.001) then
      step := 0.001; // Limit to valid range
-  adjustment := NormalizeFloat(((locLoudFactor * loudestVolume) / step) / _slots.Count, 0.0, loudestVolume * 0.25); // Limit to valid range
+  adjustment := Clamp(((locLoudFactor * loudestVolume) / step) / _slots.Count, 0.0, loudestVolume * 0.25); // Limit to valid range
 
   // Adjust
   if (index = loudestIndex) then
      _slots[index]._suppression := _slots[index]._suppression - adjustment
   else
      _slots[index]._suppression := _slots[index]._suppression + adjustment;
-  _slots[index]._suppression := NormalizeFloat(_slots[index]._suppression, 0.0, loudestVolume);
+  _slots[index]._suppression := Clamp(_slots[index]._suppression, 0.0, loudestVolume);
 end;
 
 constructor TRadioStation.Create;
@@ -593,16 +611,6 @@ begin
   _slots := TRadioStationSlotList.Create;
   _rsname := '';
   _mastervol := 0.0;
-  Process(nil, 0.0, rsPaused, 0, false);
-end;
-
-constructor TRadioStation.Create(files: TStrings; loudFactor: double);
-begin
-  inherited Create;
-  _slots := TRadioStationSlotList.Create;
-  _rsname := '';
-  _mastervol := loudFactor;
-  _slots.Add(TRadioStationSlot.Create(files, 1.0));
   Process(nil, 0.0, rsPaused, 0, false);
 end;
 
@@ -621,7 +629,7 @@ var
   i: integer;
 begin
   for i := 0 to _slots.Count - 1 do
-      if (not _slots[i].CheckOwnerListCompatibility(lst)) or _slots[i].IsMP3Slot then
+      if (not _slots[i].CheckOwnerListCompatibility(lst))then
          exit(false); // Ownership collision
 
   // No collision
@@ -635,7 +643,7 @@ begin
   if (_status = rsError) or (not CheckSlotOwnerListCompatibility(Owners)) then
      exit(false);
 
-  // Create track
+  // Create slot
   slot := TRadioStationSlot.Create(Owners, FileName, LoudnessFactor, DampeningFactor);
   if (not slot.IsValid) then
      begin
@@ -649,12 +657,42 @@ begin
 end;
 
 function TRadioStation.AddRadioSlot(Owners: TStringArray; Track: TPlayableAudioTrack; LoudnessFactor, DampeningFactor: double): boolean;
+var
+  slot: TRadioStationSlot;
 begin
   if (_status = rsError) or (Track.Status = ssError) or (not CheckSlotOwnerListCompatibility(Owners)) then
      exit(false);
 
+  // Create slot
+  slot := TRadioStationSlot.Create(Owners, Track, LoudnessFactor, DampeningFactor);
+  if (not slot.IsValid) then
+     begin
+       slot.Free;
+       exit(false);
+     end;
+
   // Now can add slot
-  _slots.Add(TRadioStationSlot.Create(Owners, Track, LoudnessFactor, DampeningFactor));
+  _slots.Add(slot);
+  exit(true);
+end;
+
+function TRadioStation.AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double): boolean;
+var
+  slot: TRadioStationSlot;
+begin
+  if (_status = rsError) or (not CheckSlotOwnerListCompatibility(Owners)) then
+     exit(false);
+
+  // Create slot
+  slot := TRadioStationSlot.Create(Owners, Files, LoudnessFactor, DampeningFactor);
+  if (not slot.IsValid) then
+     begin
+       slot.Free;
+       exit(false);
+     end;
+
+  // Now can add slot
+  _slots.Add(slot);
   exit(true);
 end;
 
@@ -717,7 +755,7 @@ begin
      playbackStatus := rsPaused;
   if (_status <> rsError) then
      _status := playbackStatus;
-  _volume := NormalizeFloat(newVolume, 0.0, 1.0);
+  _volume := Clamp(newVolume, 0.0, 1.0);
   locVol := _volume * _mastervol;
 
   // Process

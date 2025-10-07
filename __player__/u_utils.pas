@@ -15,8 +15,10 @@ procedure WriteStringSetting(ini: TIniFile; name, value: string);
 procedure WriteIntSetting(ini: TIniFile; name: string; value: integer);
 procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
 procedure ShuffleList(lst: TStrings);
-function NormalizeFloat(flt, minvalue, maxvalue: double): double;
-function NormalizeInt(ivalue, minvalue, maxvalue: integer): integer;
+function Clamp(flt, minvalue, maxvalue: double): double;
+function Clamp(ivalue, minvalue, maxvalue: integer): integer;
+function ParseList(lst: string): TStringArray;
+procedure OrderListByFile(lst: TStrings; orderBy: string);
 
 var
   X4OrsFormatSettings: TFormatSettings;
@@ -112,7 +114,7 @@ begin
          end;
 end;
 
-function NormalizeFloat(flt, minvalue, maxvalue: double): double;
+function Clamp(flt, minvalue, maxvalue: double): double;
 begin
   if (maxvalue < minvalue) then
      maxvalue := minvalue;
@@ -124,7 +126,7 @@ begin
      Result := flt;
 end;
 
-function NormalizeInt(ivalue, minvalue, maxvalue: integer): integer;
+function Clamp(ivalue, minvalue, maxvalue: integer): integer;
 begin
   if (maxvalue < minvalue) then
      maxvalue := minvalue;
@@ -134,6 +136,86 @@ begin
      Result := maxvalue
   else
      Result := ivalue;
+end;
+
+function ParseList(lst: string): TStringArray;
+var
+  tok: integer;
+  str: string;
+begin
+  SetLength(Result, 0);
+  repeat
+    tok := Pos(',', lst);
+    if (tok <= 0) then
+       str := Trim(lst)
+    else
+       begin
+         str := Trim(LeftStr(lst, tok - 1));
+         lst := Trim(RightStr(lst, Length(lst) - tok));
+       end;
+    if (str <> '') then
+       begin
+         SetLength(Result, Length(Result) + 1);
+         Result[High(Result)] := str;
+       end;
+  until (tok <= 0);
+end;
+
+procedure OrderListByFile(lst: TStrings; orderBy: string);
+var
+  f: System.Text;
+  line, orderByName, orderedName: string;
+  orderByList, copyList: TStrings;
+  i, j: integer;
+begin
+  if (lst.Count > 0) and FileExists(orderBy) then
+     begin
+       orderByList := TStringList.Create;
+       copyList := TStringList.Create;
+       try
+         System.Assign(f, orderBy);
+         {$I-}
+         Reset(f);
+         while not EOF(f) do
+               begin
+                 readln(f, line);
+                 line := Trim(line);
+                 if (line <> '') and (not AnsiStartsText(';', line)) then
+                    orderByList.Add(line);
+               end;
+         System.Close(f);
+         {$I+}
+         if (IOResult = 0) and (orderByList.Count > 0) then
+            begin
+              copyList.AddStrings(lst);
+              lst.Clear;
+              for i := 0 to orderByList.Count - 1 do
+                  begin
+                    orderByName := ExtractFileName(orderByList[i]);
+                    for j := 0 to copyList.Count - 1 do
+                        begin
+                          orderedName := ExtractFileName(Trim(copyList[j]));
+                          if (CompareText(orderByName, orderedName) = 0) then
+                             begin
+                               lst.Add(copyList[j]);
+                               break;
+                             end;
+                        end;
+                  end;
+              for i := 0 to copyList.Count - 1 do
+                  begin
+                    orderedName := copyList[i];
+                    if (lst.IndexOf(orderedName) < 0) then
+                       lst.Add(orderedName);
+                  end;
+            end;
+       finally
+         orderByList.Clear;
+         orderByList.Free;
+         copyList.Clear;
+         copyList.Free;
+       end;
+     end;
 end;
 
 initialization

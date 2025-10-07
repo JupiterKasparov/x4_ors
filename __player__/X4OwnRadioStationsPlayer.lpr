@@ -1,5 +1,9 @@
 program X4OwnRadioStationsPlayer;
 
+{$IFNDEF WIN64}
+  {$ERROR This application will only work on 64-bit Windows!}
+{$ENDIF}
+
 {$APPTYPE GUI}
 {$MODE OBJFPC}
 {$H+}
@@ -7,7 +11,7 @@ program X4OwnRadioStationsPlayer;
 
 uses
     Windows, SysUtils, Classes,
-    Math, IniFiles, strutils,
+    FileUtil, IniFiles, strutils,
     u_logger, u_radio, u_utils, u_manager;
 
 const
@@ -45,6 +49,7 @@ var
 // ********************************
 
 function IsGameRunning: boolean;
+
 var
   gamemutex: HANDLE;
 begin
@@ -54,18 +59,18 @@ begin
      CloseHandle(gamemutex);
 end;
 
-procedure GetMP3Data(lst: TStrings);
+procedure GetMP3Data(lst: TStrings; dir: string);
 var
   rec: TSearchRec;
   fn: string;
 begin
   lst.Clear;
-  if (FindFirst('mp3/*', faAnyFile, rec) = 0) then
+  if (FindFirst(Format('%s/*', [dir]), faAnyFile, rec) = 0) then
      begin
        repeat
           if ((rec.Attr and faDirectory) = faDirectory) or (rec.Name = '.') or (rec.Name = '..') then
              continue; // Do not load directories!
-          fn := Format('mp3/%s', [rec.Name]);
+          fn := Format('%s/%s', [dir, rec.Name]);
           if (lst.IndexOf(fn) < 0) then
              lst.Add(fn);
        until (FindNext(rec) <> 0);
@@ -147,7 +152,7 @@ begin
                          'music_volume':
                            begin
                              if TryStrToInt(tokenValue, i) then
-                                GameStatus.MusicVolume := NormalizeFloat(i / 100.0, 0.0, 1.0)
+                                GameStatus.MusicVolume := Clamp(i / 100.0, 0.0, 1.0)
                              else
                                 begin
                                   Log('READ DATA', Format('Cannot convert MusicVolume property (''%s'') to int! Assuming zero!', [tokenValue]));
@@ -263,6 +268,104 @@ begin
      end;
 end;
 
+// ********************************
+// LOADERS
+// ********************************
+procedure LoadRadioStation(index: integer);
+var
+  radio: TRadioStation;
+  i, slotCount: integer;
+  slotFileName: string;
+  slotOwners: TStringArray;
+  mp3List: TStrings;
+  loudFactor, dampFactor: double;
+begin
+  radio := TRadioStation.Create;
+
+  // Radio station properties
+  try
+    mp3List := TStringList.Create;
+    radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [index]), '-- NONAME --');
+    slotCount := ReadIntSetting(Settings, Format('Radio_%d.SlotCount', [index]), 0);
+    if (slotCount = 0) then
+       begin
+         // Single-slot
+         radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [index]), 0.0);
+         slotFileName := ReadStringSetting(Settings, Format('Radio_%d.FileName', [index]), '');
+         slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.Owner', [index]), ''));
+         dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [index]), 0.0), 0.0, 1.0);
+         if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
+            Log('INIT', Format('Radio station file or directory ''%s'' does not exist!', [slotFileName]))
+         else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
+            Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
+         else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
+            Log('INIT', Format('Ownership collision detected, radio station %d (''%s'') will be ignored!', [index, radio.RadioStationName]))
+         else
+            begin
+              if (ReadIntSetting(Settings, Format('Radio_%d.IsMP3', [index]), 0) <> 0) then
+                 begin
+                   GetMP3Data(mp3List, slotFileName);
+                   if (ReadIntSetting(Settings, Format('Radio_%d.Ordered', [index]), 0) <> 0) then
+                      OrderListByFile(mp3List, Format('radio_%d_order.lst', [index]))
+                   else if ProgramSettings.RandomizeTracks then
+                      ShuffleList(mp3List);
+                   if not radio.AddRadioSlot(slotOwners, mp3List, 1.0, dampFactor) then
+                      Log('INIT', Format('Failed to load MP3 player radio station %d (''%s'')!', [index, radio.RadioStationName]));
+                 end
+              else if not radio.AddRadioSlot(slotOwners, slotFileName, 1.0, dampFactor) then
+                 Log('INIT', Format('Failed to load radio station %d (''%s'')!', [index, radio.RadioStationName]));
+            end;
+         SetLength(slotOwners, 0);
+       end
+    else
+       begin
+         // Multi-slot
+         radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [index]), 0.0);
+         for i := 1 to slotCount do
+             begin
+               slotFileName := ReadStringSetting(Settings, Format('Radio_%d.SlotFileName_%d', [index, i]), '');
+               slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.SlotOwner_%d', [index, i]), ''));
+               loudFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [index, i]), 0.0), 0.0, 1.0);
+               dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [index, i]), 0.0), 0.0, 1.0);
+               if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
+                  Log('INIT', Format('Slot file or directory ''%s'' does not exist!', [slotFileName]))
+               else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
+                  Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
+               else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
+                  Log('INIT', Format('Ownership collision detected, slot %d of radio station %d (''%s'') will be ignored!', [i, index, radio.RadioStationName]))
+               else
+                  begin
+                    if (ReadIntSetting(Settings, Format('Radio_%d.SlotIsMP3_%d', [index, i]), 0) <> 0) then
+                       begin
+                         GetMP3Data(mp3List, slotFileName);
+                         if (ReadIntSetting(Settings, Format('Radio_%d.SlotOrdered_%d', [index, i]), 0) <> 0) then
+                            OrderListByFile(mp3List, Format('radio_%d_slot_%d_order.lst', [index, i]))
+                         else if ProgramSettings.RandomizeTracks then
+                            ShuffleList(mp3List);
+                         if not radio.AddRadioSlot(slotOwners, mp3List, loudFactor, dampFactor) then
+                            Log('INIT', Format('Failed to load MP3 player slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
+                       end
+                    else if not radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor) then
+                       Log('INIT', Format('Failed to load slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
+                  end;
+               SetLength(slotOwners, 0);
+             end;
+       end;
+  finally
+    SetLength(slotOwners, 0);
+    mp3List.Clear;
+    mp3List.Free;
+  end;
+
+  // Register radio station
+  if radio.IsValid then
+     Manager.AddRadioStation(radio)
+  else
+     begin
+       Log('INIT', Format('Radio station %d (''%s'') failed to load!', [index, radio.RadioStationName]));
+       radio.Free;
+     end;
+end;
 
 // ********************************
 // INIT, FINAL, RUN
@@ -270,13 +373,13 @@ end;
 
 procedure InitProgram;
 var
-  i, j, tok, slotCount: integer;
-  slotOwners: TStringArray;
-  loudFactor, dampFactor: double;
-  slotFileName, slotOwnerList, slotOwner: string;
+  i: integer;
   radio: TRadioStation;
   mp3List: TStrings;
+  dummy: TStringArray;
 begin
+  SetLength(dummy, 0);
+
   // Program initialization
   ZeroMemory(@GameStatus, sizeof(GameStatus));
   Manager := TRadioStationManager.Create;
@@ -284,99 +387,31 @@ begin
   Settings := TIniFile.Create('settings.ini');
 
   // Global settings
-  ProgramSettings.Latency := NormalizeInt(ReadIntSetting(Settings, 'Global.Latency', 1000), 10, 5000);
+  ProgramSettings.Latency := Clamp(ReadIntSetting(Settings, 'Global.Latency', 1000), 10, 5000);
   ProgramSettings.RandomizeTracks := (ReadIntSetting(Settings, 'Global.RandomizeTracks', 0) <> 0);
   ProgramSettings.NoOnlineStreams := (ReadIntSetting(Settings, 'Global.NoOnlineStreams', 0) <> 0);
   ProgramSettings.LinearVolume := (ReadIntSetting(Settings, 'Global.UseLinearVolume', 0) <> 0);
-  ProgramSettings.MasterLoudness := NormalizeFloat(ReadFloatSetting(Settings, 'Global.LoudnessFactor', 1.0), 0.0, 1.0);
+  ProgramSettings.MasterLoudness := Clamp(ReadFloatSetting(Settings, 'Global.LoudnessFactor', 1.0), 0.0, 1.0);
 
   // Radio stations
   for i := 1 to max(0, ReadIntSetting(Settings, 'Global.NumberOfStations', 0)) do
-      begin
-        radio := TRadioStation.Create;
-        slotCount := ReadIntSetting(Settings, Format('Radio_%d.SlotCount', [i]), 0);
-        if (slotCount > 0) then
-           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [i]), 0.0) // New-style
-        else
-           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [i]), 0.0);  // Old-style
-        radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [i]), '-- NONAME --');
-        for j := 1 to max(1, slotCount) do
-            begin
-              if (slotCount > 0) then
-                 slotFileName := ReadStringSetting(Settings, Format('Radio_%d.SlotFileName_%d', [i, j]), '') // New-style
-              else
-                 slotFileName := ReadStringSetting(Settings, Format('Radio_%d.FileName', [i]), ''); // Old-style
-              if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName)) then
-                 Log('INIT', Format('Radio station file ''%s'' does not exist!', [slotFileName]))
-              else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
-                 Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
-              else
-                 begin
-                   // Multi-owner system
-                   SetLength(slotOwners, 0);
-                   if (slotCount > 0) then
-                      slotOwnerList := ReadStringSetting(Settings, Format('Radio_%d.SlotOwner_%d', [i, j]), '') // New-style
-                   else
-                      slotOwnerList := ReadStringSetting(Settings, Format('Radio_%d.Owner', [i]), ''); // Old-style
-                   repeat
-                      tok := Pos(',', slotOwnerList);
-                      if (tok <= 0) then
-                         slotOwner := Trim(slotOwnerList)
-                      else
-                         begin
-                           slotOwner := Trim(LeftStr(slotOwnerList, tok - 1));
-                           slotOwnerList := Trim(RightStr(slotOwnerList, Length(slotOwnerList) - tok));
-                         end;
-                      if (slotOwner <> '') then
-                         begin
-                           SetLength(slotOwners, Length(slotOwners) + 1);
-                           slotOwners[High(slotOwners)] := slotOwner;
-                         end;
-                   until (tok <= 0);
-                   if (slotCount > 0) then
-                      begin
-                        // New-style
-                        loudFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [i, j]), 0.0), 0.0, 1.0);
-                        dampFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [i, j]), 0.0), 0.0, 1.0)
-                      end
-                   else
-                      begin
-                        // Old-stlye
-                        dampFactor := NormalizeFloat(ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [i]), 0.0), 0.0, 1.0);
-                        loudFactor := 1.0;
-                      end;
-                   if radio.CheckSlotOwnerListCompatibility(slotOwners) then
-                      begin
-                        if not radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor) then
-                           Log('INIT', Format('Cannot add slot %d for station %d (''%s'')!', [j, i, radio.RadioStationName]));
-                      end
-                   else
-                      Log('INIT', Format('Ownership collision detected, slot %d for station %d (''%s'') will be ignored!', [j, i, radio.RadioStationName]));
-                   SetLength(slotOwners, 0);
-                 end;
-            end;
-        if radio.IsValid then
-           Manager.AddRadioStation(radio)
-        else
-           begin
-             Log('INIT', Format('Radio station %d (''%s'') failed to load!', [i, radio.RadioStationName]));
-             radio.Free;
-           end;
-      end;
+      LoadRadioStation(i);
 
   // MP3 player radio station
   if (ReadIntSetting(Settings, 'Radio_MP3.Enabled', 0) <> 0) then
      begin
        mp3List := TStringList.Create;
-       GetMP3Data(mp3List);
+       GetMP3Data(mp3List, 'mp3');
        if ProgramSettings.RandomizeTracks then
           ShuffleList(mp3List);
        if (mp3List.Count > 0) then
           begin
-            radio := TRadioStation.Create(mp3List, NormalizeFloat(ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0), 0.0, 1.0));
+            radio := TRadioStation.Create;
             radio.RadioStationName := ReadStringSetting(Settings, 'Radio_MP3.RadioText', '-- NONAME (MP3) --');
+            radio.MasterVolume := Clamp(ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0), 0.0, 1.0);
+            radio.AddRadioSlot(dummy, mp3List, 1.0, 1.0);
             if radio.IsValid then
-               Manager.AddRadioStation(radio)
+               Manager.AddRadioStation(radio, true)
             else
               begin
                 radio.Free;
@@ -460,6 +495,7 @@ end;
 {$R *.res}
 
 var
+  exeFilePath: array [0..32767] of char = '';
   i: integer;
   mustRunProgram: boolean;
   ProgramMutexHandle: HANDLE;
@@ -469,8 +505,8 @@ begin
   // Application initialization
   // ********************************
   // Set working directory to real current directory (files must be accessible)
-  GetModuleFileName(GetModuleHandle(nil), argv[0], 32767);
-  SetCurrentDir(ExtractFilePath(ParamStr(0)));
+  GetModuleFileName(GetModuleHandle(nil), @exeFilePath, 32767);
+  SetCurrentDir(ExtractFilePath(StrPas(exeFilePath)));
 
   // If the priority is too low, set it to Above Normal (so music won't freeze)
   if (GetPriorityClass(GetCurrentProcess) <> $8000) and (GetPriorityClass(GetCurrentProcess) <> $80) and (GetPriorityClass(GetCurrentProcess) <> $100) then
