@@ -47,6 +47,12 @@ begin
   Result := integer(GetPrivateProfileInt(PChar(section), PChar(key), WINT(defval), PChar(inifile)));
 end;
 
+procedure lua_add_to_list(L: PLua_State; var index: integer);
+begin
+  lua_rawseti(L, -2, index + 1);
+  inc(index);
+end;
+
 // Shorthand funcs
 procedure internal_OpenMemBuf;
 begin
@@ -102,9 +108,12 @@ begin
   Result := 0;
 end;
 
-function GetFactionDataString(L: PLua_State): cint; cdecl;
+function SendCommand(L: PLua_State): cint; cdecl;
 var
-  i, j: integer;
+  offset: dword;
+  exeFunction: byte;
+  s: string;
+  i, j, k, stationCount: integer;
   playerid: UniverseID;
   numFactions: cuint32;
   factionNames: array of PChar;
@@ -112,146 +121,224 @@ var
   shortestDist, currentDist: cfloat;
   numCurrFactStations: cuint32;
   factionStations: array of UniverseID;
-  answer: string;
+  p2, p3, p4: boolean;
 begin
-  answer := '';
-  playerid := CGetPlayerID();
-  numFactions := CGetNumAllFactions(cbool(1));
-  SetLength(factionNames, numFactions);
-  try
-    numFactions := CGetAllFactions(@factionNames[0], numFactions, cbool(1));
-    for i := 0 to numFactions - 1 do
-        begin
-          currFaction := factionNames[i];
-          numCurrFactStations := CGetNumAllFactionStations(currFaction);
-          SetLength(factionStations, numCurrFactStations);
-          numCurrFactStations := CGetAllFactionStations(@factionStations[0], numCurrFactStations, currFaction);
-          shortestDist := cfloat.MaxValue;
-          for j := 0 to numCurrFactStations - 1 do
-              if (CGetNumStationModules(factionStations[j], cbool(0), cbool(0)) <> 0) then
-                 begin
-                   currentDist := CGetDistanceBetween(playerid, factionStations[j]);
-                   if (currentDist < shortestDist) then
-                      shortestDist := currentDist;
-                 end;
-          answer := answer + Format(#10'faction_station: %s %f', [StrPas(currFaction), shortestDist], X4OrsFormatSettings);
-        end;
-  finally
-    SetLength(factionNames, 0);
-    SetLength(factionStations, 0);
-  end;
-  lua_pushstring(L, PChar(answer));
-  Result := 1;
-end;
-
-function SendCommand(L: PLua_State): cint; cdecl;
-var
-  answer: string;
-  i: integer;
-begin
-  if (SharedMemBuffer <> nil) and (lua_gettop(L) >= 1) and (lua_isstring(L, 1) <> LongBool(0)) then
+  if (SharedMemBuffer <> nil) and (lua_gettop(L) >= 1) and (lua_isnumber(L, 1) <> LongBool(0)) then
      begin
-       answer := StrPas(PChar(lua_tostring(L, 1)));
-       if (lua_gettop(L) >= 2) then
-          answer := answer + Format(#10'%s', [StrPas(PChar(lua_tostring(L, 2)))]);
-       ZeroMemory(SharedMemBuffer, Length(answer) + 1);
-       for i := Length(answer) downto 1 do
-           PChar(SharedMemBuffer + i - 1)^ := answer[i];
+       exeFunction := byte(lua_tointeger(L, 1)); // Param 1
+       if (exeFunction = 1) then
+          begin
+            offset := 1;
+
+            p2 := false;
+            p3 := false;
+            p4 := false;
+
+            // Param 2: Music Volume (float)
+            if (lua_gettop(L) >= 2) and (lua_isnumber(L, 2) <> LongBool(0)) then
+               begin
+                 PByte(SharedMemBuffer + offset)^ := 1;
+                 pcfloat(SharedMemBuffer + offset + 1)^ := cfloat(lua_tonumber(L, 2));
+                 inc(offset, sizeof(cfloat) + 1);
+               end;
+
+            // Param 3: Is Active Menu (bool / byte)
+            if (lua_gettop(L) >= 3) and (lua_isnumber(L, 3) <> LongBool(0)) then
+               begin
+                 PByte(SharedMemBuffer + offset)^ := 2;
+                 PByte(SharedMemBuffer + offset + 1)^ := byte(lua_tointeger(L, 3));
+                 inc(offset, 2);
+                 if (lua_tointeger(L, 3) <> 0) then
+                    p2 := true;
+               end;
+
+            // Param 4: Can Hear Music (bool / byte)
+            if (lua_gettop(L) >= 4) and (lua_isnumber(L, 4) <> LongBool(0)) then
+               begin
+                 PByte(SharedMemBuffer + offset)^ := 3;
+                 PByte(SharedMemBuffer + offset + 1)^ := byte(lua_tointeger(L, 4));
+                 inc(offset, 2);
+                 if (lua_tointeger(L, 4) <> 0) then
+                    p3 := true;
+               end;
+
+            // Param 5: Current Station Index (int)
+            if (lua_gettop(L) >= 5) and (lua_isnumber(L, 5) <> LongBool(0)) then
+               begin
+                 PByte(SharedMemBuffer + offset)^ := 4;
+                 pcint(SharedMemBuffer + offset + 1)^ := cint(lua_tointeger(L, 5));
+                 inc(offset, sizeof(cint) + 1);
+                 if (lua_tointeger(L, 5) >= 0) then
+                    p4 := true;
+               end;
+
+            // Faction data
+            if p2 and p3 and p4 then
+               begin
+                 playerid := CGetPlayerID();
+                 numFactions := CGetNumAllFactions(cbool(1));
+                 SetLength(factionNames, numFactions);
+                 try
+                   numFactions := CGetAllFactions(@factionNames[0], numFactions, cbool(1));
+                   for i := 0 to numFactions - 1 do
+                       begin
+                         currFaction := factionNames[i];
+                         numCurrFactStations := CGetNumAllFactionStations(currFaction);
+                         SetLength(factionStations, numCurrFactStations);
+                         numCurrFactStations := CGetAllFactionStations(@factionStations[0], numCurrFactStations, currFaction);
+                         shortestDist := cfloat.MaxValue;
+                         stationCount := 0;
+                         for j := 0 to numCurrFactStations - 1 do
+                             if (CGetNumStationModules(factionStations[j], cbool(0), cbool(0)) <> 0) then
+                                begin
+                                  currentDist := CGetDistanceBetween(playerid, factionStations[j]);
+                                  if (currentDist < shortestDist) then
+                                     shortestDist := currentDist;
+                                  inc(stationCount);
+                                end;
+                         if (stationCount > 0) then
+                            begin
+                              s := StrPas(currFaction);
+                              if (Length(s) > 0) then
+                                 begin
+                                   PByte(SharedMemBuffer + offset)^ := 5;
+                                   inc(offset);
+                                   for k := 1 to Length(s) do
+                                       begin
+                                         PChar(SharedMemBuffer + offset)^ := s[k];
+                                         inc(offset, sizeof(char));
+                                       end;
+                                   PChar(SharedMemBuffer + offset)^ := #0;
+                                   inc(offset, sizeof(char));
+                                   pcfloat(SharedMemBuffer + offset)^ := shortestDist;
+                                   inc(offset, sizeof(cfloat));
+                                 end;
+                            end;
+                       end;
+                 finally
+                   SetLength(factionNames, 0);
+                   SetLength(factionStations, 0);
+                 end;
+               end;
+
+            // Closing param
+            PByte(SharedMemBuffer + offset)^ := 0;
+          end;
+
+       // Write EXE function last
+       if (exeFunction <> 2) then // Exe function 2 cannot be called! It is actually the answer provided by the EXE!
+          PByte(SharedMemBuffer)^ := exeFunction;
      end;
   Result := 0;
 end;
 
 function GetAnswer(L: PLua_State): cint; cdecl;
 var
-  answer: string;
-  i: integer;
-  b: byte;
-begin
-  if (SharedMemBuffer <> nil) then
-     try
-       answer := '';
-       for i := 0 to SharedMemSize - 1 do
-           begin
-             b := PByte(SharedMemBuffer + i)^;
-             if (b <> 0) then
-                answer := answer + chr(b)
-             else
-                break;
-           end;
-       answer := Trim(answer);
-
-       // Hack the Key Bindings into the result string!
-       if AnsiStartsStr('programdata', Trim(answer)) then
-          begin
-            answer := answer + Format(#10'key_binding: %d %d', [1, local_ini_GetInt('Keys', 'Modifier_1', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [2, local_ini_GetInt('Keys', 'Modifier_2', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [3, local_ini_GetInt('Keys', 'Func_PrevStation', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [4, local_ini_GetInt('Keys', 'Func_NextStation', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [5, local_ini_GetInt('Keys', 'Func_ReplayThisMP3', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [6, local_ini_GetInt('Keys', 'Func_SkipThisMP3', 0)]);
-            answer := answer + Format(#10'key_binding: %d %d', [7, local_ini_GetInt('Keys', 'Func_ReloadApp', 0)]);
-          end;
-
-       // Return answer
-       lua_pushstring(L, PChar(answer));
-
-     except
-       lua_pushstring(L, '');
-     end
-  else
-     lua_pushstring(L, '');
-  Result := 1;
-end;
-
-function ParseAnswer(L: PLua_State): cint; cdecl;
-var
-  index, tok1, tok2: integer;
-  answer, dataline, tokenName, tokenValue: string;
+  offset: dword;
+  datatype: byte;
+  s: string;
+  c: char;
+  index: integer;
 begin
   lua_newtable(L);
-
-  // Parse string
-  if (SharedMemBuffer <> nil) and (lua_gettop(L) >= 1) and (lua_isstring(L, 1) <> LongBool(0)) then
+  if (SharedMemBuffer <> nil) and (PByte(SharedMemBuffer)^ = 2) then
      begin
        index := 0;
-       answer := Trim(StrPas(PChar(lua_tostring(L, 1))));
-       if (answer <> '') then
-          repeat
-            // Parse line-by-line
-            tok1 := Pos(#10, answer);
-            if (tok1 > 0) then
-               begin
-                 dataline := Trim(LeftStr(answer, tok1 - 1));
-                 answer := Trim(RightStr(answer, Length(answer) - tok1));
-               end
-            else
-               dataline := Trim(answer);
+       offset := 1;
+       repeat
+         datatype := PByte(SharedMemBuffer + offset)^;
+         inc(offset);
 
-            // Process data
-            tok2 := Pos(':', dataline);
-            if (tok2 > 0) then
-               begin
-                 tokenName := Trim(LeftStr(dataline, tok2 - 1));
-                 tokenValue := Trim(RightStr(dataline, Length(dataline) - tok2));
-               end
-            else
-               begin
-                 tokenName := Trim(dataline);
-                 tokenValue := '';
-               end;
+         // Data identifier
+         if (datatype <> 0) then
+            begin
+              lua_pushinteger(L, datatype);
+              lua_add_to_list(L, index);
+            end;
 
-            // Add to result list
-            lua_pushstring(L, PChar(tokenName));
-            lua_rawseti(L, -2, cint((index * 2) + 1));
-            lua_pushstring(L, PChar(tokenValue));
-            lua_rawseti(L, -2, cint((index * 2) + 2));
+         // Rs Name
+         if (datatype = 1) then
+            begin
+              s := '';
+              repeat
+                c := PChar(SharedMemBuffer + offset)^;
+                inc(offset, sizeof(char));
+                if (c <> #0) then
+                   s := s + c;
+              until c = #0;
+              lua_pushstring(L, PChar(s));
+              lua_add_to_list(L, index);
+            end
 
-            // Next iteration
-            inc(index);
-          until (tok1 <= 0);
+         // Latency
+         else if (datatype = 2) then
+            begin
+              lua_pushinteger(L, pcint(SharedMemBuffer + offset)^);
+              lua_add_to_list(L, index);
+              inc(offset, sizeof(cint));
+            end;
+       until datatype = 0;
+
+       // ************************************************
+       // Hack the Key Bindings into the resulting array
+       // ************************************************
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Modifier_1', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Modifier_2', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Func_PrevStation', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Func_NextStation', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Func_ReplayThisMP3', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Func_SkipThisMP3', 0));
+       lua_add_to_list(L, index);
+
+       // Data identifier
+       lua_pushinteger(L, 3);
+       lua_add_to_list(L, index);
+
+       // Key Binding
+       lua_pushinteger(L, local_ini_GetInt('Keys', 'Func_ReloadApp', 0));
+       lua_add_to_list(L, index);
      end;
-
-  // Return
   Result := 1;
 end;
 
@@ -399,10 +486,8 @@ begin
           lua_register(L, 'X4_ORS_ClearMemBuf', @ClearMemBuf);
           lua_register(L, 'X4_ORS_OpenMemBuf', @OpenMemBuf);
           lua_register(L, 'X4_ORS_FreeMemBuf', @FreeMemBuf);
-          lua_register(L, 'X4_ORS_GetFactionDataString', @GetFactionDataString);
           lua_register(L, 'X4_ORS_SendCommand', @SendCommand);
           lua_register(L, 'X4_ORS_GetAnswer', @GetAnswer);
-          lua_register(L, 'X4_ORS_ParseAnswer', @ParseAnswer);
           lua_register(L, 'X4_ORS_IsExeRunning', @IsExeRunning);
           lua_register(L, 'X4_ORS_IsKeyDown', @IsKeyDown);
           lua_register(L, 'X4_ORS_Sleep', @WinSleep);

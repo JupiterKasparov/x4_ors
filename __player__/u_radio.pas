@@ -569,7 +569,7 @@ begin
            lst.Add(indentString + #9'%s', [_tracks[i].FileName]);
      end
   else
-     lst.Add('Invalid slot!');
+     lst.Add(indentString + 'Invalid slot!');
 end;
 
 {################
@@ -832,7 +832,7 @@ begin
            end;
      end
   else
-     lst.Add('Invalid radio station!');
+     lst.Add(indentString + 'Invalid radio station!');
 end;
 
 end.

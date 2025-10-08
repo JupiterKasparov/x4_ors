@@ -35,7 +35,7 @@ begin
          time := Now;
          System.Assign(log, logname);
          {$I-}
-         if (not logActive) then
+         if (not logActive) or (not FileExists(logname)) then
             begin
               logActive := true;
               Rewrite(log);

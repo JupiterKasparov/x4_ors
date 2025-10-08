@@ -10,7 +10,7 @@ program X4OwnRadioStationsPlayer;
 {$PACKRECORDS C}
 
 uses
-    Windows, SysUtils, Classes,
+    Windows, SysUtils, Classes, ctypes,
     FileUtil, IniFiles, strutils,
     u_logger, u_radio, u_utils, u_manager;
 
@@ -49,7 +49,6 @@ var
 // ********************************
 
 function IsGameRunning: boolean;
-
 var
   gamemutex: HANDLE;
 begin
@@ -65,6 +64,7 @@ var
   fn: string;
 begin
   lst.Clear;
+  dir := ExcludeTrailingPathDelimiter(dir);
   if (FindFirst(Format('%s/*', [dir]), faAnyFile, rec) = 0) then
      begin
        repeat
@@ -82,191 +82,126 @@ end;
 // UTILS
 // ********************************
 
-procedure SendData(answerType, answerText: string; mem: Pointer);
+procedure SendProgramData;
 var
-  answer: string;
-  i: integer;
+  i, j: integer;
+  offset: dword;
+  names: TStringArray;
 begin
-  answer := answerType + #10 + answerText;
+  PByte(MemoryBuffer)^ := 0;
+  offset := 1;
 
-  // This construct will copy the answer to the memory backwards, so the LUA script won't try to access the data until it's fully copied
-  ZeroMemory(mem, Length(answer) + 1);
-  for i := Length(answer) downto 1 do
-      PChar(mem + i - 1)^ := answer[i];
+  // Rs Names
+  try
+    names := Manager.GetNameList;
+    for i := 0 to High(names) do
+        begin
+          PByte(MemoryBuffer + offset)^ := 1; // Data type: Rs Name
+          inc(offset);
+          for j := 1 to names[i].Length do
+              begin
+                PChar(MemoryBuffer + offset)^ := names[i][j];
+                inc(offset, sizeof(char));
+              end;
+          PChar(MemoryBuffer + offset)^ := #0;
+          inc(offset, sizeof(char));
+        end;
+  finally
+    SetLength(names, 0);
+  end;
+
+  // Latency
+  PByte(MemoryBuffer + offset)^ := 2; // Data type: Latency
+  inc(offset);
+  pcint(MemoryBuffer + offset)^ := cint(ProgramSettings.Latency); // Data tyoe: Latency
+  inc(offset, sizeof(pcint));
+
+  // Closing tag
+  PByte(MemoryBuffer + offset)^ := 0;
+  inc(offset);
+
+  // Write the function ID last
+  PByte(MemoryBuffer)^ := 2;
 end;
 
-function ProcessGameData: integer;
+function ProcessGameData: byte;
 var
-  exefunction, data, dataline, tokenName, tokenValue, tokenName2, tokenValue2, answer: string;
-  i, tok1, tok2, tok3: integer;
-  f: double;
-  firstline: boolean;
-  rsnames: TStringArray;
+  offset: dword;
+  cf: cfloat;
+  cb, gamedataparam: byte;
+  ci: cint;
+  c: char;
+  s: string;
 begin
-  Result := 0; // No heartbeat
-  data := Trim(StrPas(PChar(MemoryBuffer)));
-  if (data <> '') then
+  // Game Data: analyze, then discard data
+  if (PByte(MemoryBuffer)^ = 1) then
      begin
-       exefunction := '';
-       firstline := true;
+       ZeroMemory(@GameStatus, sizeof(GameStatus));
+       GameStatus.CurrentStationIndex := -1;
+       SetLength(ClosestStationData, 0);
+
+       // Process data
+       offset := 1;
        repeat
-         // Line-by-line processing
-         tok1 := Pos(#10, data);
-         if (tok1 > 0) then
-            begin
-              dataline := Trim(LeftStr(data, tok1 - 1));
-              data := Trim(RightStr(data, Length(data) - tok1));
-            end
-         else
-            dataline := Trim(data);
-         if (exefunction = '') then
-            exefunction := dataline;
-         case LowerCase(exefunction) of
-               'gamedata':
-                 begin
-                   Result := 1; // Heartbeat signal
+          gamedataparam := PByte(MemoryBuffer + offset)^;
+          inc(offset);
+          case gamedataparam of
+                1:
+                  begin
+                    cf := pcfloat(MemoryBuffer + offset)^;
+                    GameStatus.MusicVolume := Clamp(cf, 0.0, 1.0);
+                    inc(offset, sizeof(cfloat));
+                  end;
+                2:
+                  begin
+                    cb := PByte(MemoryBuffer + offset)^;
+                    GameStatus.IsActiveMenu := (cb <> 0);
+                    inc(offset);
+                  end;
+                3:
+                  begin
+                    cb := PByte(MemoryBuffer + offset)^;
+                    GameStatus.CanHearMusic := (cb <> 0);
+                    inc(offset);
+                  end;
+                4:
+                  begin
+                    ci := pcint(MemoryBuffer + offset)^;
+                    GameStatus.CurrentStationIndex := ci;
+                    inc(offset, sizeof(cint));
+                  end;
+                5:
+                  begin
+                    s := '';
+                    repeat
+                       c := PChar(MemoryBuffer + offset)^;
+                       if (c <> #0) then
+                          s := s + c;
+                       inc(offset, sizeof(char));
+                    until c = #0;
+                    cf := pcfloat(MemoryBuffer + offset)^;
+                    inc(offset, sizeof(cfloat));
+                    SetLength(ClosestStationData, Length(ClosestStationData) + 1);
+                    ClosestStationData[High(ClosestStationData)].FactionName := s;
+                    ClosestStationData[High(ClosestStationData)].DistanceKm := cf / 1000.0; // To get the distance in km
+                  end;
+          end;
+       until gamedataparam = 0;
+       Result := 1;
+       PByte(MemoryBuffer)^ := 0;
+     end
 
-                   // Cleanup data structures before starting to work with them
-                   if firstline then
-                      begin
-                        firstline := false;
-                        ZeroMemory(@GameStatus, sizeof(GameStatus));
-                        GameStatus.CurrentStationIndex := -1;
-                        SetLength(ClosestStationData, 0);
-                        continue;
-                      end;
+  // Program Data: do nothing (the in-game script didn't process the data yet)
+  else if (PByte(MemoryBuffer)^ = 2) then
+     Result := 2
 
-                   // Process data
-                   tok2 := Pos(':', dataline);
-                   if (tok2 > 0) then
-                      begin
-                        tokenName := Trim(LeftStr(dataline, tok2 - 1));
-                        tokenValue := Trim(RightStr(dataline, Length(dataline) - tok2));
-                      end
-                   else
-                      begin
-                        tokenName := Trim(dataline);
-                        tokenValue := '';
-                      end;
-                   case LowerCase(tokenName) of
-                         'music_volume':
-                           begin
-                             if TryStrToInt(tokenValue, i) then
-                                GameStatus.MusicVolume := Clamp(i / 100.0, 0.0, 1.0)
-                             else
-                                begin
-                                  Log('READ DATA', Format('Cannot convert MusicVolume property (''%s'') to int! Assuming zero!', [tokenValue]));
-                                  GameStatus.MusicVolume := 0.0;
-                                end;
-                           end;
-                         'is_active_menu':
-                           begin
-                             if TryStrToInt(tokenValue, i) then
-                                GameStatus.IsActiveMenu := (i <> 0)
-                             else
-                                begin
-                                  Log('READ DATA', Format('Cannot convert IsActiveMenu property (''%s'') to bool! Assuming false!', [tokenValue]));
-                                  GameStatus.IsActiveMenu := false;
-                                end;
-                           end;
-                         'can_hear_music':
-                           begin
-                             if TryStrToInt(tokenValue, i) then
-                                GameStatus.CanHearMusic := (i <> 0)
-                             else
-                                begin
-                                  Log('READ DATA', Format('Cannot convert CanHearMusic property (''%s'') to bool! Assuming false!', [tokenValue]));
-                                  GameStatus.CanHearMusic := false;
-                                end;
-                           end;
-                         'current_station_index':
-                           begin
-                             if TryStrToInt(tokenValue, i) then
-                                GameStatus.CurrentStationIndex := i
-                             else
-                                begin
-                                  Log('READ DATA', Format('Cannot convert CurrentStationIndex property (''%s'') to int! Assuming -1 (off)!', [tokenValue]));
-                                  GameStatus.CurrentStationIndex := -1;
-                                end;
-                           end;
-                         'faction_station':
-                           begin
-                             tok3 := Pos(' ', tokenValue);
-                             if (tok3 < 0) then
-                                tok3 := Pos(#9, tokenValue);
-                             if (tok3 > 0) then
-                                begin
-                                  tokenName2 := Trim(LeftStr(tokenValue, tok3 - 1));
-                                  tokenValue2 := Trim(RightStr(tokenValue, Length(tokenValue) - tok3));
-                                  if TryStrToFloat(tokenValue2, f, X4OrsFormatSettings) then
-                                     begin
-                                       SetLength(ClosestStationData, Length(ClosestStationData) + 1);
-                                       ClosestStationData[High(ClosestStationData)].FactionName := tokenName2;
-                                       ClosestStationData[High(ClosestStationData)].DistanceKm := f / 1000.0; // To get the distance in km
-                                     end
-                                  else
-                                     Log('READ DATA', Format('Cannot convert faction station distance definition value (''%s'') to float for faction ''%s''!', [tokenValue2, tokenName2]));
-
-                                end
-                             else
-                                Log('READ DATA', Format('Cannot process invalid faction station distance definition (''%s'')!', [tokenValue]));
-                           end;
-                         else
-                           Log('READ DATA', Format('Unknown gameplay property ''%s''!', [tokenName]));
-                   end;
-
-                   // Finished working with data
-                   if (tok1 <= 0) then
-                      PChar(MemoryBuffer)^ := #0;
-                 end;
-               'replay_mp3':
-                 begin
-                   Manager.ReplayCurrTrack;
-
-                   // Finished working with data
-                   PChar(MemoryBuffer)^ := #0;
-                 end;
-               'skip_mp3':
-                 begin
-                   Manager.SkipNextTrack;
-
-                   // Finished working with data
-                   PChar(MemoryBuffer)^ := #0;
-                 end;
-               'reload':
-                 begin
-                   // Finished working with data
-                   PChar(MemoryBuffer)^ := #0;
-
-                   // Signal that we must reload the application
-                   Result := 2; // Reload signal
-                 end;
-               'request':
-                 begin
-                   // Construct answer
-                   answer := '';
-                   rsnames := Manager.GetNameList;
-                   for i := 0 to High(rsnames) do
-                       answer := answer + Format(#10'radio_station: %s', [rsnames[i]]);
-                   answer := answer + Format(#10'latency: %d', [ProgramSettings.Latency]);
-
-                   // Send data
-                   SetLength(rsnames, 0);
-                   SendData('programdata', Trim(answer), MemoryBuffer);
-                 end;
-               'programdata':
-                 ; // Skip - the script didn't process the data yet!
-               else
-                 begin
-                   Log('READ DATA', Format('Nonexistent EXE function ''%s''!', [exefunction]));
-
-                   // Finished working with data
-                   PChar(MemoryBuffer)^ := #0;
-                 end;
-         end;
-       until (tok1 <= 0);
+  // Otherwise: memorize function ID, then discard data
+  else
+     begin
+       Result := PByte(MemoryBuffer)^;
+       PByte(MemoryBuffer)^ := 0;
      end;
-end;
+  end;
 
 // ********************************
 // LOADERS
@@ -279,92 +214,139 @@ var
   slotOwners: TStringArray;
   mp3List: TStrings;
   loudFactor, dampFactor: double;
+  mp3FeatureSupport: boolean;
 begin
   radio := TRadioStation.Create;
+  mp3List := TStringList.Create;
 
   // Radio station properties
   try
-    mp3List := TStringList.Create;
-    radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [index]), '-- NONAME --');
-    slotCount := ReadIntSetting(Settings, Format('Radio_%d.SlotCount', [index]), 0);
-    if (slotCount = 0) then
-       begin
-         // Single-slot
-         radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [index]), 0.0);
-         slotFileName := ReadStringSetting(Settings, Format('Radio_%d.FileName', [index]), '');
-         slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.Owner', [index]), ''));
-         dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [index]), 0.0), 0.0, 1.0);
-         if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
-            Log('INIT', Format('Radio station file or directory ''%s'' does not exist!', [slotFileName]))
-         else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
-            Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
-         else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
-            Log('INIT', Format('Ownership collision detected, radio station %d (''%s'') will be ignored!', [index, radio.RadioStationName]))
-         else
-            begin
-              if (ReadIntSetting(Settings, Format('Radio_%d.IsMP3', [index]), 0) <> 0) then
-                 begin
-                   GetMP3Data(mp3List, slotFileName);
-                   if (ReadIntSetting(Settings, Format('Radio_%d.Ordered', [index]), 0) <> 0) then
-                      OrderListByFile(mp3List, Format('radio_%d_order.lst', [index]))
-                   else if ProgramSettings.RandomizeTracks then
-                      ShuffleList(mp3List);
-                   if not radio.AddRadioSlot(slotOwners, mp3List, 1.0, dampFactor) then
-                      Log('INIT', Format('Failed to load MP3 player radio station %d (''%s'')!', [index, radio.RadioStationName]));
-                 end
-              else if not radio.AddRadioSlot(slotOwners, slotFileName, 1.0, dampFactor) then
-                 Log('INIT', Format('Failed to load radio station %d (''%s'')!', [index, radio.RadioStationName]));
-            end;
-         SetLength(slotOwners, 0);
-       end
-    else
-       begin
-         // Multi-slot
-         radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [index]), 0.0);
-         for i := 1 to slotCount do
-             begin
-               slotFileName := ReadStringSetting(Settings, Format('Radio_%d.SlotFileName_%d', [index, i]), '');
-               slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.SlotOwner_%d', [index, i]), ''));
-               loudFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [index, i]), 0.0), 0.0, 1.0);
-               dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [index, i]), 0.0), 0.0, 1.0);
-               if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
-                  Log('INIT', Format('Slot file or directory ''%s'' does not exist!', [slotFileName]))
-               else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
-                  Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
-               else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
-                  Log('INIT', Format('Ownership collision detected, slot %d of radio station %d (''%s'') will be ignored!', [i, index, radio.RadioStationName]))
-               else
-                  begin
-                    if (ReadIntSetting(Settings, Format('Radio_%d.SlotIsMP3_%d', [index, i]), 0) <> 0) then
-                       begin
-                         GetMP3Data(mp3List, slotFileName);
-                         if (ReadIntSetting(Settings, Format('Radio_%d.SlotOrdered_%d', [index, i]), 0) <> 0) then
-                            OrderListByFile(mp3List, Format('radio_%d_slot_%d_order.lst', [index, i]))
-                         else if ProgramSettings.RandomizeTracks then
-                            ShuffleList(mp3List);
-                         if not radio.AddRadioSlot(slotOwners, mp3List, loudFactor, dampFactor) then
-                            Log('INIT', Format('Failed to load MP3 player slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
-                       end
-                    else if not radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor) then
-                       Log('INIT', Format('Failed to load slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
-                  end;
-               SetLength(slotOwners, 0);
-             end;
-       end;
+    try
+      mp3FeatureSupport := false;
+      radio.RadioStationName := ReadStringSetting(Settings, Format('Radio_%d.RadioText', [index]), '-- NONAME --');
+      slotCount := ReadIntSetting(Settings, Format('Radio_%d.SlotCount', [index]), 0);
+      if (slotCount = 0) then
+         begin
+           // Single-slot
+           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.LoudnessFactor', [index]), 0.0);
+           slotFileName := ReadStringSetting(Settings, Format('Radio_%d.FileName', [index]), '');
+           slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.Owner', [index]), ''));
+           dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.DampeningFactor', [index]), 0.0), 0.0, 1.0);
+           if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
+              Log('INIT', Format('Radio station file or directory ''%s'' does not exist!', [slotFileName]))
+           else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
+              Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
+           else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
+              Log('INIT', Format('Ownership collision detected, radio station %d (''%s'') will be ignored!', [index, radio.RadioStationName]))
+           else
+              begin
+                if (ReadIntSetting(Settings, Format('Radio_%d.IsMP3', [index]), 0) <> 0) then
+                   begin
+                     if (Length(slotOwners) = 0) then
+                        mp3FeatureSupport  := true;
+                     GetMP3Data(mp3List, slotFileName);
+                     if (ReadIntSetting(Settings, Format('Radio_%d.Ordered', [index]), 0) <> 0) then
+                        OrderListByFile(mp3List, Format('radio_%d_order.lst', [index]))
+                     else if ProgramSettings.RandomizeTracks then
+                        ShuffleList(mp3List);
+                     if not radio.AddRadioSlot(slotOwners, mp3List, 1.0, dampFactor) then
+                        Log('INIT', Format('Failed to load MP3 Player radio station %d (''%s'')!', [index, radio.RadioStationName]));
+                   end
+                else if not radio.AddRadioSlot(slotOwners, slotFileName, 1.0, dampFactor) then
+                   Log('INIT', Format('Failed to load radio station %d (''%s'')!', [index, radio.RadioStationName]));
+              end;
+           SetLength(slotOwners, 0);
+         end
+      else
+         begin
+           // Multi-slot
+           radio.MasterVolume := ReadFloatSetting(Settings, Format('Radio_%d.MasterLoudnessFactor', [index]), 0.0);
+           for i := 1 to slotCount do
+               begin
+                 slotFileName := ReadStringSetting(Settings, Format('Radio_%d.SlotFileName_%d', [index, i]), '');
+                 slotOwners := ParseList(ReadStringSetting(Settings, Format('Radio_%d.SlotOwner_%d', [index, i]), ''));
+                 loudFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotLoudnessFactor_%d', [index, i]), 0.0), 0.0, 1.0);
+                 dampFactor := Clamp(ReadFloatSetting(Settings, Format('Radio_%d.SlotDampeningFactor_%d', [index, i]), 0.0), 0.0, 1.0);
+                 if (slotFileName = '') or (not IsNetFile(slotFileName)) and (not FileExists(slotFileName) and (not DirectoryExists(slotFileName))) then
+                    Log('INIT', Format('Slot file or directory ''%s'' does not exist!', [slotFileName]))
+                 else if IsNetFile(slotFileName) and ProgramSettings.NoOnlineStreams then
+                    Log('INIT', Format('Ignoring online stream ''%s''...', [slotFileName]))
+                 else if not radio.CheckSlotOwnerListCompatibility(slotOwners) then
+                    Log('INIT', Format('Ownership collision detected, slot %d of radio station %d (''%s'') will be ignored!', [i, index, radio.RadioStationName]))
+                 else
+                    begin
+                      if (ReadIntSetting(Settings, Format('Radio_%d.SlotIsMP3_%d', [index, i]), 0) <> 0) then
+                         begin
+                           GetMP3Data(mp3List, slotFileName);
+                           if (ReadIntSetting(Settings, Format('Radio_%d.SlotOrdered_%d', [index, i]), 0) <> 0) then
+                              OrderListByFile(mp3List, Format('radio_%d_slot_%d_order.lst', [index, i]))
+                           else if ProgramSettings.RandomizeTracks then
+                              ShuffleList(mp3List);
+                           if not radio.AddRadioSlot(slotOwners, mp3List, loudFactor, dampFactor) then
+                              Log('INIT', Format('Failed to load MP3 Player slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
+                         end
+                      else if not radio.AddRadioSlot(slotOwners, slotFileName, loudFactor, dampFactor) then
+                         Log('INIT', Format('Failed to load slot %d of radio station %d (''%s'')!', [i, index, radio.RadioStationName]));
+                    end;
+                 SetLength(slotOwners, 0);
+               end;
+         end;
+      // Register radio station
+      if radio.IsValid then
+         Manager.AddRadioStation(radio, mp3FeatureSupport)
+      else
+         begin
+           Log('INIT', Format('Radio station %d (''%s'') failed to load!', [index, radio.RadioStationName]));
+           radio.Free;
+         end;
+      radio := nil;
+    except
+      if Assigned(radio) then
+         radio.Free;
+      raise;
+    end;
   finally
     SetLength(slotOwners, 0);
     mp3List.Clear;
     mp3List.Free;
   end;
+end;
 
-  // Register radio station
-  if radio.IsValid then
-     Manager.AddRadioStation(radio)
-  else
-     begin
-       Log('INIT', Format('Radio station %d (''%s'') failed to load!', [index, radio.RadioStationName]));
-       radio.Free;
-     end;
+procedure LoadMP3Station;
+var
+  radio: TRadioStation;
+  mp3List: TStrings;
+  owners: TStringArray;
+begin
+  SetLength(owners, 0);
+  mp3List := TStringList.Create;
+  radio := TRadioStation.Create;
+  try
+    try
+      GetMP3Data(mp3List, 'mp3');
+      if ProgramSettings.RandomizeTracks then
+         ShuffleList(mp3List);
+      radio.RadioStationName := ReadStringSetting(Settings, 'Radio_MP3.RadioText', '-- NONAME (MP3) --');
+      radio.MasterVolume := Clamp(ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0), 0.0, 1.0);
+      radio.AddRadioSlot(owners, mp3List, 1.0, 1.0);
+      if radio.IsValid then
+         Manager.AddRadioStation(radio, true)
+      else
+         begin
+           Log('INIT', 'Failed to load the MP3 Player radio station!');
+           radio.Free;
+         end;
+      radio := nil;
+    except
+      if Assigned(radio) then
+         radio.Free;
+      raise;
+    end;
+  finally
+    SetLength(owners, 0);
+    mp3List.Clear;
+    mp3List.Free;
+  end;
 end;
 
 // ********************************
@@ -374,12 +356,7 @@ end;
 procedure InitProgram;
 var
   i: integer;
-  radio: TRadioStation;
-  mp3List: TStrings;
-  dummy: TStringArray;
 begin
-  SetLength(dummy, 0);
-
   // Program initialization
   ZeroMemory(@GameStatus, sizeof(GameStatus));
   Manager := TRadioStationManager.Create;
@@ -397,30 +374,9 @@ begin
   for i := 1 to max(0, ReadIntSetting(Settings, 'Global.NumberOfStations', 0)) do
       LoadRadioStation(i);
 
-  // MP3 player radio station
+  // Dedicated MP3 player radio station
   if (ReadIntSetting(Settings, 'Radio_MP3.Enabled', 0) <> 0) then
-     begin
-       mp3List := TStringList.Create;
-       GetMP3Data(mp3List, 'mp3');
-       if ProgramSettings.RandomizeTracks then
-          ShuffleList(mp3List);
-       if (mp3List.Count > 0) then
-          begin
-            radio := TRadioStation.Create;
-            radio.RadioStationName := ReadStringSetting(Settings, 'Radio_MP3.RadioText', '-- NONAME (MP3) --');
-            radio.MasterVolume := Clamp(ReadFloatSetting(Settings, 'Radio_MP3.LoudnessFactor', 0.0), 0.0, 1.0);
-            radio.AddRadioSlot(dummy, mp3List, 1.0, 1.0);
-            if radio.IsValid then
-               Manager.AddRadioStation(radio, true)
-            else
-              begin
-                radio.Free;
-                Log('INIT', 'Failed to load the MP3 Player radio station!');
-              end;
-          end;
-       mp3List.Clear;
-       mp3List.Free;
-     end;
+     LoadMP3Station;
 
   // Radio Station Report
   if (not NoLog) then
@@ -470,7 +426,13 @@ begin
                       else
                          Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
                     end;
-                  2:
+                  3:
+                    SendProgramData;
+                  4:
+                    Manager.ReplayCurrTrack;
+                  5:
+                    Manager.SkipNextTrack;
+                  6:
                     begin
                       Log('MAIN', 'Reloading application...');
                       exit(true); // Result - TRUE: Must reload program after function return
