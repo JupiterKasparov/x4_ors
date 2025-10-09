@@ -22,6 +22,7 @@
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="20"/>
       <RevisionNr Value="1"/>
+      <BuildNr Value="1"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4: Foundations - Own Radio Stations - Playback Controller Application" InternalName="X4_ORS"/>
     </VersionInfo>
     <BuildModes Count="1">

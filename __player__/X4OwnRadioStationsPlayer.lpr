@@ -114,7 +114,7 @@ begin
   PByte(MemoryBuffer + offset)^ := 2; // Data type: Latency
   inc(offset);
   pcint(MemoryBuffer + offset)^ := cint(ProgramSettings.Latency); // Data tyoe: Latency
-  inc(offset, sizeof(pcint));
+  inc(offset, sizeof(cint));
 
   // Closing tag
   PByte(MemoryBuffer + offset)^ := 0;
