@@ -19,6 +19,7 @@ type
     procedure Process(currentStationIndex: integer; currentVolume: double; factionData: PFactionDistanceDataArray; bUseLinearVol: boolean; playbackStatus: TRadioStatus; currentTime: qword);
     procedure SetRandomPos(maxrandompos: double);
     procedure SkipNextTrack;
+    procedure SkipPrevTrack;
     procedure ReplayCurrTrack;
     function GetNameList: TStringArray;
     procedure WriteReport(fileName: string);
@@ -92,6 +93,12 @@ procedure TRadioStationManager.SkipNextTrack;
 begin
   if (_rsindex > -1) and _stations[_rsindex].IsDedicatedMP3Player then
      _stations[_rsindex].RadioStation.SkipNextTrack;
+end;
+
+procedure TRadioStationManager.SkipPrevTrack;
+begin
+  if (_rsindex > -1) and _stations[_rsindex].IsDedicatedMP3Player then
+     _stations[_rsindex].RadioStation.SkipPrevTrack;
 end;
 
 procedure TRadioStationManager.ReplayCurrTrack;

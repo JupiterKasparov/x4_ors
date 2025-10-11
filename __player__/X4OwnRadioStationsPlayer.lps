@@ -49,7 +49,12 @@
         <Loaded Value="True"/>
       </Unit5>
     </Units>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory Count="1">
+      <Position1>
+        <Filename Value="u_radio.pas"/>
+        <Caret Line="76" Column="20" TopLine="52"/>
+      </Position1>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes ActiveMode="default"/>

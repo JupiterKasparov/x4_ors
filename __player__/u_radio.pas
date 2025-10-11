@@ -73,6 +73,7 @@ type
     procedure SetRandomPos(MaxRandomPos: double);
     procedure ReplayCurrTrack;
     procedure SkipNextTrack;
+    procedure SkipPrevTrack;
     procedure Process(newVolume: double; playbackStatus: TSongStatus; currentTime: qword; bIsActiveSlot: boolean);
     procedure GenerateReport(lst: TStrings; indentationLevel: integer);
     property IsMP3Slot: boolean read _ismp3;
@@ -103,6 +104,7 @@ type
     function IsValid: boolean;
     procedure SetRandomPos(MaxRandomPos: double);
     procedure SkipNextTrack;
+    procedure SkipPrevTrack;
     procedure ReplayCurrTrack;
     procedure Process(factionData: PFactionDistanceDataArray; newVolume: double; playbackStatus: TRadioStatus; currentTime: qword; bIsActiveRadio: boolean);
     procedure GenerateReport(lst: TStrings; indentationLevel: integer);
@@ -504,6 +506,22 @@ begin
      _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive); // This just stops the current MP3, a subsequent 'Process' call will skip to the next MP3.
 end;
 
+procedure TRadioStationSlot.SkipPrevTrack;
+begin
+  if _ismp3 and IsValid then
+     begin
+       // This just stops the current MP3 and rewind the track number by 2; a subsequent 'Process' call will skip to the next MP3.
+       _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive);
+       case _mp3index of
+            0: _mp3index := _tracks.Count - 2;
+            1: _mp3index := _tracks.Count - 1;
+            else dec(_mp3index, 2);
+       end;
+       if (_mp3index < 0) then
+          _mp3index := 0;
+     end;
+end;
+
 procedure TRadioStationSlot.Process(newVolume: double; playbackStatus: TSongStatus; currentTime: qword; bIsActiveSlot: boolean);
 var
   i: integer;
@@ -728,6 +746,18 @@ begin
   // Skip to next track
   for i := 0 to _slots.Count - 1 do
       _slots[i].SkipNextTrack;
+end;
+
+procedure TRadioStation.SkipPrevTrack;
+var
+  i: integer;
+begin
+  if (not IsValid) or (_status = rsError) then
+     exit;
+
+  // Skip to next track
+  for i := 0 to _slots.Count - 1 do
+      _slots[i].SkipPrevTrack;
 end;
 
 procedure TRadioStation.ReplayCurrTrack;

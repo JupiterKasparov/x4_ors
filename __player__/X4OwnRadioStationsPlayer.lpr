@@ -47,7 +47,6 @@ var
 // ********************************
 // HELPERS
 // ********************************
-
 function IsGameRunning: boolean;
 var
   gamemutex: HANDLE;
@@ -81,14 +80,12 @@ end;
 // ********************************
 // UTILS
 // ********************************
-
 procedure SendProgramData;
 var
   i, j: integer;
   offset: dword;
   names: TStringArray;
 begin
-  PByte(MemoryBuffer)^ := 0;
   offset := 1;
 
   // Rs Names
@@ -118,13 +115,9 @@ begin
 
   // Closing tag
   PByte(MemoryBuffer + offset)^ := 0;
-  inc(offset);
-
-  // Write the function ID last
-  PByte(MemoryBuffer)^ := 2;
 end;
 
-function ProcessGameData: byte;
+procedure ProcessGameData;
 var
   offset: dword;
   cf: cfloat;
@@ -133,75 +126,60 @@ var
   c: char;
   s: string;
 begin
-  // Game Data: analyze, then discard data
-  if (PByte(MemoryBuffer)^ = 1) then
-     begin
-       ZeroMemory(@GameStatus, sizeof(GameStatus));
-       GameStatus.CurrentStationIndex := -1;
-       SetLength(ClosestStationData, 0);
+  offset := 1;
 
-       // Process data
-       offset := 1;
-       repeat
-          gamedataparam := PByte(MemoryBuffer + offset)^;
-          inc(offset);
-          case gamedataparam of
-                1:
-                  begin
-                    cf := pcfloat(MemoryBuffer + offset)^;
-                    GameStatus.MusicVolume := Clamp(cf, 0.0, 1.0);
-                    inc(offset, sizeof(cfloat));
-                  end;
-                2:
-                  begin
-                    cb := PByte(MemoryBuffer + offset)^;
-                    GameStatus.IsActiveMenu := (cb <> 0);
-                    inc(offset);
-                  end;
-                3:
-                  begin
-                    cb := PByte(MemoryBuffer + offset)^;
-                    GameStatus.CanHearMusic := (cb <> 0);
-                    inc(offset);
-                  end;
-                4:
-                  begin
-                    ci := pcint(MemoryBuffer + offset)^;
-                    GameStatus.CurrentStationIndex := ci;
-                    inc(offset, sizeof(cint));
-                  end;
-                5:
-                  begin
-                    s := '';
-                    repeat
-                       c := PChar(MemoryBuffer + offset)^;
-                       if (c <> #0) then
-                          s := s + c;
-                       inc(offset, sizeof(char));
-                    until c = #0;
-                    cf := pcfloat(MemoryBuffer + offset)^;
-                    inc(offset, sizeof(cfloat));
-                    SetLength(ClosestStationData, Length(ClosestStationData) + 1);
-                    ClosestStationData[High(ClosestStationData)].FactionName := s;
-                    ClosestStationData[High(ClosestStationData)].DistanceKm := cf / 1000.0; // To get the distance in km
-                  end;
-          end;
-       until gamedataparam = 0;
-       Result := 1;
-       PByte(MemoryBuffer)^ := 0;
-     end
+  // Clear records
+  ZeroMemory(@GameStatus, sizeof(GameStatus));
+  GameStatus.CurrentStationIndex := -1;
+  SetLength(ClosestStationData, 0);
 
-  // Program Data: do nothing (the in-game script didn't process the data yet)
-  else if (PByte(MemoryBuffer)^ = 2) then
-     Result := 2
-
-  // Otherwise: memorize function ID, then discard data
-  else
-     begin
-       Result := PByte(MemoryBuffer)^;
-       PByte(MemoryBuffer)^ := 0;
+  // Process data
+  repeat
+     gamedataparam := PByte(MemoryBuffer + offset)^;
+     inc(offset);
+     case gamedataparam of
+           1:
+             begin
+               cf := pcfloat(MemoryBuffer + offset)^;
+               GameStatus.MusicVolume := Clamp(cf, 0.0, 1.0);
+               inc(offset, sizeof(cfloat));
+             end;
+           2:
+             begin
+               cb := PByte(MemoryBuffer + offset)^;
+               GameStatus.IsActiveMenu := (cb <> 0);
+               inc(offset);
+             end;
+           3:
+             begin
+               cb := PByte(MemoryBuffer + offset)^;
+               GameStatus.CanHearMusic := (cb <> 0);
+               inc(offset);
+             end;
+           4:
+             begin
+               ci := pcint(MemoryBuffer + offset)^;
+               GameStatus.CurrentStationIndex := ci;
+               inc(offset, sizeof(cint));
+             end;
+           5:
+             begin
+               s := '';
+               repeat
+                  c := PChar(MemoryBuffer + offset)^;
+                  if (c <> #0) then
+                     s := s + c;
+                  inc(offset, sizeof(char));
+               until c = #0;
+               cf := pcfloat(MemoryBuffer + offset)^;
+               inc(offset, sizeof(cfloat));
+               SetLength(ClosestStationData, Length(ClosestStationData) + 1);
+               ClosestStationData[High(ClosestStationData)].FactionName := s;
+               ClosestStationData[High(ClosestStationData)].DistanceKm := cf / 1000.0; // To get the distance in km
+             end;
      end;
-  end;
+  until gamedataparam = 0;
+end;
 
 // ********************************
 // LOADERS
@@ -243,7 +221,7 @@ begin
                 if (ReadIntSetting(Settings, Format('Radio_%d.IsMP3', [index]), 0) <> 0) then
                    begin
                      if (Length(slotOwners) = 0) then
-                        mp3FeatureSupport  := true;
+                        mp3FeatureSupport := true;
                      GetMP3Data(mp3List, slotFileName);
                      if (ReadIntSetting(Settings, Format('Radio_%d.Ordered', [index]), 0) <> 0) then
                         OrderListByFile(mp3List, Format('radio_%d_order.lst', [index]))
@@ -352,7 +330,6 @@ end;
 // ********************************
 // INIT, FINAL, RUN
 // ********************************
-
 procedure InitProgram;
 var
   i: integer;
@@ -394,7 +371,7 @@ function RunProgram: boolean;
 var
   currentTime, lastUpdateTime: qword;
 begin
-  Result := false; // Result - FALSE: Must exit program after function return
+  Result := false; // -> Exit program after function return
   currentTime := GetTickCount64;
   lastUpdateTime := currentTime;
 
@@ -412,9 +389,10 @@ begin
           currentTime := GetTickCount64;
           MemoryBuffer := MapViewOfFile(SharedMemFile, FILE_MAP_ALL_ACCESS, 0, 0, SharedMemSize);
           try
-            case ProcessGameData of
+            case PByte(MemoryBuffer)^ of
                   1:
                     begin
+                      ProcessGameData;
                       lastUpdateTime := currentTime;
                       if GameStatus.IsActiveMenu then
                          begin
@@ -425,21 +403,41 @@ begin
                          end
                       else
                          Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+                      PByte(MemoryBuffer)^ := 0; // Clear memory
                     end;
                   3:
-                    SendProgramData;
+                    begin
+                      SendProgramData;
+                      PByte(MemoryBuffer)^ := 2; // Output: Answer
+                    end;
                   4:
-                    Manager.ReplayCurrTrack;
+                    begin
+                      Manager.ReplayCurrTrack;
+                      PByte(MemoryBuffer)^ := 0; // Clear memory
+                    end;
                   5:
-                    Manager.SkipNextTrack;
+                    begin
+                      Manager.SkipNextTrack;
+                      PByte(MemoryBuffer)^ := 0; // Clear memory
+                    end;
                   6:
                     begin
                       Log('MAIN', 'Reloading application...');
-                      exit(true); // Result - TRUE: Must reload program after function return
+                      PByte(MemoryBuffer)^ := 0; // Clear memory
+                      exit(true); // -> Reload program after function return
+                    end;
+                  7:
+                    begin
+                      Manager.SkipPrevTrack;
+                      PByte(MemoryBuffer)^ := 0; // Clear memory
                     end;
                   else
-                    if ((currentTime - lastUpdateTime) > ProgramSettings.Latency) then
-                       Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+                    begin
+                      if ((currentTime - lastUpdateTime) > ProgramSettings.Latency) then
+                         Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+                      if (PByte(MemoryBuffer)^ <> 2) then
+                         PByte(MemoryBuffer)^ := 0; // Only clear memory, if the script has already processed the data!
+                    end;
             end;
           finally
             UnmapViewOfFile(MemoryBuffer);
@@ -453,7 +451,6 @@ end;
 // ********************************
 // MAIN
 // ********************************
-
 {$R *.res}
 
 var
