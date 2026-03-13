@@ -52,6 +52,7 @@ type
   TRadioStationSlot = class
   private
     _ismp3: boolean;
+    _mp3controldisabled: boolean;
     _mp3index: integer;
     _tracks: TRadioStationSlotTrackList;
     _owners: TStringArray;
@@ -63,13 +64,13 @@ type
   public
     _suppression: double; // Helps improve overlapping radio stations slots over time!
     constructor Create(ownerList: TStringArray; fileName: string; loudFactor, dampFactor: double);
-    constructor Create(ownerList: TStringArray; track: TPlayableAudioTrack; loudFactor, dampFactor: double);
-    constructor Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double);
+    constructor Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double; noUserControl: boolean = false);
     destructor Destroy; override;
     function GetBaseVolume(factionData: PFactionDistanceDataArray): double; // Based solely on faction ownerships and distances
     function GetClosestDistance(factionData: PFactionDistanceDataArray): double; // Based solely on faction ownerships and distances
     function CheckOwnerListCompatibility(lst: TStringArray): boolean;
     function IsValid: boolean;
+    function CanDoUserInput: boolean;
     procedure SetRandomPos(MaxRandomPos: double);
     procedure ReplayCurrTrack;
     procedure SkipNextTrack;
@@ -99,9 +100,9 @@ type
     destructor Destroy; override;
     function CheckSlotOwnerListCompatibility(lst: TStringArray): boolean;
     function AddRadioSlot(Owners: TStringArray; FileName: string; LoudnessFactor, DampeningFactor: double): boolean;
-    function AddRadioSlot(Owners: TStringArray; Track: TPlayableAudioTrack; LoudnessFactor, DampeningFactor: double): boolean;
-    function AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double): boolean;
+    function AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double; noUserControl: boolean = false): boolean;
     function IsValid: boolean;
+    function CanDoUserInput: boolean;
     procedure SetRandomPos(MaxRandomPos: double);
     procedure SkipNextTrack;
     procedure SkipPrevTrack;
@@ -113,20 +114,9 @@ type
     property MasterVolume: double read _mastervol write int_SetMasterVol;
   end;
 
-  TRadioStationInfo = record
-    RadioStation: TRadioStation;
-    IsDedicatedMP3Player: boolean;
-    class operator = (a, b: TRadioStationInfo): boolean;
-  end;
-
-  TRadioStationList = specialize TFPGList<TRadioStationInfo>;
+  TRadioStationList = specialize TFPGList<TRadioStation>;
 
 implementation
-
-class operator TRadioStationInfo .= (a, b: TRadioStationInfo): boolean;
-begin
-  Result := (a.RadioStation = b.RadioStation);
-end;
 
 {################
  TRadioStationSlotTrack
@@ -361,26 +351,13 @@ begin
   Process(0.0, ssStopped, 0, false);
 end;
 
-constructor TRadioStationSlot.Create(ownerList: TStringArray; track: TPlayableAudioTrack; loudFactor, dampFactor: double);
-begin
-  _ismp3 := false;
-  _owners := Copy(ownerList);
-  _tracks := TRadioStationSlotTrackList.Create;
-  _lf := loudFactor;
-  _df := dampFactor;
-  _isactive := false;
-  _suppression := 0.0;
-  if (track.Status <> ssError) then
-     _tracks.Add(TRadioStationSlotTrack.Create(track));
-  Process(0.0, ssStopped, 0, false);
-end;
-
-constructor TRadioStationSlot.Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double);
+constructor TRadioStationSlot.Create(ownerList: TStringArray; files: TStrings; loudFactor, dampFactor: double; noUserControl: boolean = false);
 var
   i: integer;
   track: TPlayableAudioTrack;
 begin
   _ismp3 := true;
+  _mp3controldisabled := noUserControl;
   _mp3index := 0;
   _owners := Copy(ownerList);
   _tracks := TRadioStationSlotTrackList.Create;
@@ -480,11 +457,16 @@ begin
   exit(false);
 end;
 
+function TRadioStationSlot.CanDoUserInput: boolean;
+begin
+  Result := _ismp3 and (not _mp3controldisabled) and IsValid and (Length(_owners) = 0);
+end;
+
 procedure TRadioStationSlot.SetRandomPos(MaxRandomPos: double);
 begin
   if IsValid then
      begin
-       if _ismp3 then
+       if CanDoUserInput then
           begin
             _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive); // This just stops the current MP3, a subsequent 'Process' call will skip to the next MP3.
             _mp3index := random(_tracks.Count);
@@ -496,19 +478,19 @@ end;
 
 procedure TRadioStationSlot.ReplayCurrTrack;
 begin
-  if _ismp3 and IsValid then
+  if CanDoUserInput then
      _tracks[_mp3index].PositionMs := 0;
 end;
 
 procedure TRadioStationSlot.SkipNextTrack;
 begin
-  if _ismp3 and IsValid then
+  if CanDoUserInput then
      _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive); // This just stops the current MP3, a subsequent 'Process' call will skip to the next MP3.
 end;
 
 procedure TRadioStationSlot.SkipPrevTrack;
 begin
-  if _ismp3 and IsValid then
+  if CanDoUserInput then
      begin
        // This just stops the current MP3 and rewind the track number by 2; a subsequent 'Process' call will skip to the next MP3.
        _tracks[_mp3index].Update(ssStopped, _volume, 0, _isactive);
@@ -576,18 +558,17 @@ begin
   // Generate report
   if IsValid then
      begin
-       lst.Add(indentString + 'MP3 Player: %s', [BoolToStr(_ismp3, true)]);
-       lst.Add(indentString + Format('Loudness factor: %.8f', [_lf], X4OrsFormatSettings));
-       lst.Add(indentString + Format('Dampening factor: %.8f', [_df], X4OrsFormatSettings));
+       lst.Add(indentString + Format('Loudnes: %.8f', [_lf], X4OrsFormatSettings));
+       lst.Add(indentString + Format('Damping factor: %.8f', [_df], X4OrsFormatSettings));
        lst.Add(indentString + 'Owner(s):');
        for i := 0 to High(_owners) do
            lst.Add(indentString + #9'%s', [_owners[i]]);
-       lst.Add(indentString + 'File(s):');
+       lst.Add(indentString + 'URL(s):');
        for i := 0 to _tracks.Count - 1 do
            lst.Add(indentString + #9'%s', [_tracks[i].FileName]);
      end
   else
-     lst.Add(indentString + 'Invalid slot!');
+     lst.Add(indentString + 'Invalid track!');
 end;
 
 {################
@@ -674,27 +655,7 @@ begin
   exit(true);
 end;
 
-function TRadioStation.AddRadioSlot(Owners: TStringArray; Track: TPlayableAudioTrack; LoudnessFactor, DampeningFactor: double): boolean;
-var
-  slot: TRadioStationSlot;
-begin
-  if (_status = rsError) or (Track.Status = ssError) or (not CheckSlotOwnerListCompatibility(Owners)) then
-     exit(false);
-
-  // Create slot
-  slot := TRadioStationSlot.Create(Owners, Track, LoudnessFactor, DampeningFactor);
-  if (not slot.IsValid) then
-     begin
-       slot.Free;
-       exit(false);
-     end;
-
-  // Now can add slot
-  _slots.Add(slot);
-  exit(true);
-end;
-
-function TRadioStation.AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double): boolean;
+function TRadioStation.AddRadioSlot(Owners: TStringArray; Files: TStrings; LoudnessFactor, DampeningFactor: double; noUserControl: boolean = false): boolean;
 var
   slot: TRadioStationSlot;
 begin
@@ -702,7 +663,7 @@ begin
      exit(false);
 
   // Create slot
-  slot := TRadioStationSlot.Create(Owners, Files, LoudnessFactor, DampeningFactor);
+  slot := TRadioStationSlot.Create(Owners, Files, LoudnessFactor, DampeningFactor, noUserControl);
   if (not slot.IsValid) then
      begin
        slot.Free;
@@ -724,6 +685,11 @@ begin
   exit(false);
 end;
 
+function TRadioStation.CanDoUserInput: boolean;
+begin
+  Result := IsValid and (_slots.Count = 1) and _slots[0].CanDoUserInput;
+end;
+
 procedure TRadioStation.SetRandomPos(MaxRandomPos: double);
 var
   i: integer;
@@ -740,7 +706,7 @@ procedure TRadioStation.SkipNextTrack;
 var
   i: integer;
 begin
-  if (not IsValid) or (_status = rsError) then
+  if (not CanDoUserInput) or (_status = rsError) then
      exit;
 
   // Skip to next track
@@ -752,7 +718,7 @@ procedure TRadioStation.SkipPrevTrack;
 var
   i: integer;
 begin
-  if (not IsValid) or (_status = rsError) then
+  if (not CanDoUserInput) or (_status = rsError) then
      exit;
 
   // Skip to next track
@@ -764,7 +730,7 @@ procedure TRadioStation.ReplayCurrTrack;
 var
   i: integer;
 begin
-  if (not IsValid) or (_status = rsError) then
+  if (not CanDoUserInput) or (_status = rsError) then
      exit;
 
   // Replay current track
@@ -853,11 +819,12 @@ begin
   if IsValid then
      begin
        lst.Add(indentString + 'Name: %s', [_rsname]);
-       lst.Add(indentString + Format('Master volume: %.8f', [_mastervol], X4OrsFormatSettings));
-       lst.Add(indentString + 'Slot(s):');
+       lst.Add(indentString + Format('Loudness: %.8f', [_mastervol], X4OrsFormatSettings));
+       lst.Add(indentString + 'User-controllable: %s', [BoolToStr(CanDoUserInput, true)]);
+       lst.Add(indentString + 'Track(s):');
        for i := 0 to _slots.count - 1 do
            begin
-             lst.Add(indentString + #9'Slot %d:', [i + 1]);
+             lst.Add(indentString + #9'Track %d:', [i + 1]);
              _slots[i].GenerateReport(lst, indentationLevel + 2);
            end;
      end

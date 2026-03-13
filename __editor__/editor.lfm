@@ -1,124 +1,70 @@
 object FrmEditor: TFrmEditor
-  Left = 1078
-  Height = 560
-  Top = 250
-  Width = 500
-  BorderIcons = [biSystemMenu, biMaximize]
-  BorderStyle = bsToolWindow
-  Caption = 'X4 ORS Editor'
-  ClientHeight = 560
-  ClientWidth = 500
+  Left = 604
+  Height = 480
+  Top = 200
+  Width = 480
+  Caption = 'X4 ORS configuration editor'
+  ClientHeight = 480
+  ClientWidth = 480
+  Menu = MnuMain
   Position = poDesktopCenter
   ShowHint = True
   LCLVersion = '4.2.0.0'
-  OnCloseQuery = ev_CanClose
-  OnCreate = ev_Init
-  OnDestroy = ev_Free
-  OnKeyUp = ev_KeyPress
-  OnPaint = ev_Draw
+  OnCloseQuery = ev_WindowTryClose
+  OnCreate = ev_WindowInit
+  OnDestroy = ev_WindowDestroy
   object PgEditorPages: TPageControl
     Left = 0
-    Height = 520
+    Height = 480
     Top = 0
-    Width = 488
-    ActivePage = PgEditGlobal
-    MultiLine = True
-    Options = [nboMultiLine, nboHidePageListPopup]
-    TabIndex = 0
+    Width = 480
+    ActivePage = PgEditStations
+    Align = alClient
+    TabIndex = 2
     TabOrder = 0
     object PgEditGlobal: TTabSheet
-      Caption = 'Global settings'
-      ClientHeight = 492
-      ClientWidth = 480
-      object LbgNoOfStations: TLabel
-        Left = 0
-        Height = 25
-        Top = 8
-        Width = 216
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Number of radio stations:'
-        Layout = tlCenter
-        ParentColor = False
-      end
-      object GvNoOfStations: TSpinEdit
-        Left = 224
-        Height = 25
-        Hint = 'The dedicated MP3 player radio station does not count towards this value!'
-        Top = 8
-        Width = 248
-        AutoSize = False
-        MaxValue = 256
-        TabOrder = 0
-        OnChange = ev_Change_gNoOfStations
-      end
+      Caption = 'Mod properties'
+      ClientHeight = 452
+      ClientWidth = 472
       object LbgLatency: TLabel
-        Left = 0
-        Height = 25
-        Top = 40
-        Width = 216
+        Left = 8
+        Height = 24
+        Top = 16
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Maximum latency (ms):'
+        Caption = 'Max. latency:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object GvLatency: TSpinEdit
-        Left = 224
-        Height = 25
-        Top = 40
-        Width = 248
+      object GvMaxLatency: TSpinEdit
+        Left = 160
+        Height = 24
+        Hint = 'Maximum time before the game is considered paused.'#13#10'Range: 10 - 5000 ms'
+        Top = 16
+        Width = 144
         AutoSize = False
         MaxValue = 5000
         MinValue = 10
-        TabOrder = 1
-        Value = 10
-        OnChange = ev_Change_gLatency
+        TabOrder = 0
+        Value = 500
+        OnChange = ev_gpe_MaxLatency
       end
-      object LbgRandomizeTracks: TLabel
-        Left = 0
-        Height = 25
-        Top = 72
-        Width = 216
+      object LbgRandomTracks: TLabel
+        Left = 8
+        Height = 24
+        Top = 48
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Randomize tracks upon initialization:'
+        Caption = 'Randomize tracks:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object GvRandomizeTracks: TComboBox
-        Left = 224
+      object GvRandomTracks: TComboBox
+        Left = 160
         Height = 23
-        Top = 72
-        Width = 248
-        AutoSize = False
-        ItemHeight = 15
-        ItemIndex = 0
-        Items.Strings = (
-          'No'
-          'Yes'
-        )
-        Style = csDropDownList
-        TabOrder = 2
-        Text = 'No'
-        OnChange = ev_Change_gRandomizeTracks
-      end
-      object LbgOnlineStreams: TLabel
-        Left = 0
-        Height = 25
-        Top = 104
-        Width = 216
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Enable on-line radio stations:'
-        Layout = tlCenter
-        ParentColor = False
-      end
-      object GvOnlineStreams: TComboBox
-        Left = 224
-        Height = 23
-        Top = 104
-        Width = 248
+        Hint = 'Whether to randomize file positions and shuffle MP3 tracks upon mod initialization or reload.'
+        Top = 48
+        Width = 144
         AutoSize = False
         ItemHeight = 15
         ItemIndex = 1
@@ -127,26 +73,26 @@ object FrmEditor: TFrmEditor
           'Yes'
         )
         Style = csDropDownList
-        TabOrder = 3
+        TabOrder = 1
         Text = 'Yes'
-        OnChange = ev_Change_gOnlineStreams
+        OnChange = ev_gpe_RandomTracks
       end
       object LbgLinearVolume: TLabel
-        Left = 0
-        Height = 25
-        Top = 136
-        Width = 216
+        Left = 8
+        Height = 24
+        Top = 77
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Use linear volume scale:'
+        Caption = 'Linear volume scale:'
         Layout = tlCenter
-        ParentColor = False
       end
       object GvLinearVolume: TComboBox
-        Left = 224
+        Left = 160
         Height = 23
-        Top = 136
-        Width = 248
+        Hint = 'Whether to apply linearization techniques to the logarithmic volume scale of BASS.'
+        Top = 77
+        Width = 144
         AutoSize = False
         ItemHeight = 15
         ItemIndex = 0
@@ -155,663 +101,936 @@ object FrmEditor: TFrmEditor
           'Yes'
         )
         Style = csDropDownList
-        TabOrder = 4
+        TabOrder = 2
         Text = 'No'
-        OnChange = ev_Change_gLinearVolume
+        OnChange = ev_gpe_LinearVolume
       end
       object LbgLoudnessFactor: TLabel
-        Left = 0
-        Height = 25
-        Top = 168
-        Width = 216
+        Left = 8
+        Height = 24
+        Top = 105
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Master loudness:'
+        Caption = 'Loudness:'
         Layout = tlCenter
-        ParentColor = False
       end
       object GvLoudnessFactor: TTrackBar
-        Left = 224
-        Height = 25
-        Top = 168
-        Width = 248
+        Left = 160
+        Height = 50
+        Hint = 'The master loudness of the mod.'
+        Top = 105
+        Width = 144
         Max = 100
-        Position = 100
-        OnChange = ev_Change_gLoudnessFactor
-        TabOrder = 5
+        PageSize = 20
+        Position = 50
+        ShowSelRange = False
+        OnChange = ev_gpe_LoudnessFactor
+        TabOrder = 3
       end
     end
     object PgEditKeys: TTabSheet
       Caption = 'Key bindings'
-      ClientHeight = 492
-      ClientWidth = 480
+      ClientHeight = 452
+      ClientWidth = 472
       object LbkModifier1: TLabel
-        Left = 0
-        Height = 25
-        Top = 8
-        Width = 129
+        Left = 8
+        Height = 24
+        Top = 16
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Modifier Key 1:'
+        Caption = 'Modifier key 1:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkModifier1: TButton
-        Left = 136
-        Height = 25
-        Top = 8
-        Width = 75
-        Caption = 'Edit'
+      object KvModifier1: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'Mod function invocation: Modifier 1 + Modifier 2 + Function key'
+        Top = 16
+        Width = 144
+        AutoSize = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
         TabOrder = 0
-        OnClick = ev_Change_Keys
-      end
-      object LbkvModifier1: TLabel
-        Left = 216
-        Height = 25
-        Top = 8
-        Width = 112
-        AutoSize = False
-        Caption = 'LbkvModifier1'
-        Layout = tlCenter
-        ParentColor = False
-      end
-      object LbkvModifier2: TLabel
-        Left = 216
-        Height = 25
-        Top = 40
-        Width = 112
-        AutoSize = False
-        Caption = 'LbkvModifier2'
-        Layout = tlCenter
-        ParentColor = False
-      end
-      object BtkModifier2: TButton
-        Left = 136
-        Height = 25
-        Top = 40
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 1
-        OnClick = ev_Change_Keys
+        OnButtonClick = ev_kbe_Modifier1
+        OnClick = ev_kbe_Modifier1
       end
       object LbkModifier2: TLabel
-        Left = 0
-        Height = 25
-        Top = 40
-        Width = 129
+        Left = 8
+        Height = 24
+        Top = 48
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
         Caption = 'Modifier key 2:'
         Layout = tlCenter
-        ParentColor = False
+      end
+      object KvModifier2: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'Mod function invocation: Modifier 1 + Modifier 2 + Function key'
+        Top = 48
+        Width = 144
+        AutoSize = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 1
+        OnButtonClick = ev_kbe_Modifier2
+        OnClick = ev_kbe_Modifier2
       end
       object LbkPrevStation: TLabel
-        Left = 0
-        Height = 25
-        Top = 72
-        Width = 129
+        Left = 8
+        Height = 24
+        Top = 80
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Previous Radio Station:'
+        Caption = 'Change radio station:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkPrevStation: TButton
-        Left = 136
-        Height = 25
-        Top = 72
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 2
-        OnClick = ev_Change_Keys
-      end
-      object LbkvPrevStation: TLabel
-        Left = 216
-        Height = 25
-        Top = 72
-        Width = 112
+      object KvPrevStation: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'Previous station'
+        Top = 80
+        Width = 144
         AutoSize = False
-        Caption = 'LbkvPrevStation'
-        Layout = tlCenter
-        ParentColor = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 2
+        OnButtonClick = ev_kbe_PrevStation
+        OnClick = ev_kbe_PrevStation
       end
       object LbkNextStation: TLabel
-        Left = 0
-        Height = 25
-        Top = 104
-        Width = 129
+        Left = 8
+        Height = 24
+        Top = 112
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Next Radio Station:'
+        Caption = 'Change radio station:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkNextStation: TButton
-        Left = 136
-        Height = 25
-        Top = 104
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 3
-        OnClick = ev_Change_Keys
-      end
-      object LbkvNextStation: TLabel
-        Left = 216
-        Height = 25
-        Top = 104
-        Width = 111
+      object KvNextStation: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'Next station'
+        Top = 112
+        Width = 144
         AutoSize = False
-        Caption = 'LbkvNextStation'
-        Layout = tlCenter
-        ParentColor = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 3
+        OnButtonClick = ev_kbe_NextStation
+        OnClick = ev_kbe_NextStation
       end
       object LbkReplayMP3: TLabel
-        Left = 0
-        Height = 25
-        Top = 136
-        Width = 129
+        Left = 8
+        Height = 24
+        Top = 144
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
         Caption = 'Replay current MP3:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkReplayMP3: TButton
-        Left = 136
-        Height = 25
-        Top = 136
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 4
-        OnClick = ev_Change_Keys
-      end
-      object LbkvReplayMP3: TLabel
-        Left = 217
-        Height = 25
-        Top = 136
-        Width = 110
+      object KvReplayMP3: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'This will jump back to the beginning of the currently playing MP3.'#13#10'To jump back to the previous, press this key twice in quick succession.'
+        Top = 144
+        Width = 144
         AutoSize = False
-        Caption = 'LbkvReplayMP3'
-        Layout = tlCenter
-        ParentColor = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 4
+        OnButtonClick = ev_kbe_ReplayMP3
+        OnClick = ev_kbe_ReplayMP3
       end
-      object LbkSkipMP3: TLabel
-        Left = 0
-        Height = 25
-        Top = 168
-        Width = 129
+      object LbkNextMP3: TLabel
+        Left = 8
+        Height = 24
+        Top = 176
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
-        Caption = 'Skip current MP3:'
+        Caption = 'Jump to next MP3:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkSkipMP3: TButton
-        Left = 136
-        Height = 25
-        Top = 168
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 5
-        OnClick = ev_Change_Keys
-      end
-      object LbkvSkipMP3: TLabel
-        Left = 217
-        Height = 25
-        Top = 168
-        Width = 110
+      object KvNextMP3: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'This will jump to the next MP3.'
+        Top = 176
+        Width = 144
         AutoSize = False
-        Caption = 'LbkvSkipMP3'
-        Layout = tlCenter
-        ParentColor = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 5
+        OnButtonClick = ev_kbe_NextMP3
+        OnClick = ev_kbe_NextMP3
       end
-      object LbkReloadMod: TLabel
-        Left = -3
-        Height = 25
-        Top = 200
-        Width = 132
+      object LbkReload: TLabel
+        Left = 8
+        Height = 24
+        Top = 208
+        Width = 144
         Alignment = taRightJustify
         AutoSize = False
         Caption = 'Reload mod:'
         Layout = tlCenter
-        ParentColor = False
       end
-      object BtkReloadMod: TButton
-        Left = 136
-        Height = 25
-        Top = 200
-        Width = 75
-        Caption = 'Edit'
-        TabOrder = 6
-        OnClick = ev_Change_Keys
-      end
-      object LbkvReloadMod: TLabel
-        Left = 217
-        Height = 25
-        Top = 200
-        Width = 110
+      object KvReloadMod: TEditButton
+        Left = 160
+        Height = 24
+        Hint = 'This will reload the mod.'#13#10'Any changes made are only applied after a mod reload or a game restart.'
+        Top = 208
+        Width = 144
         AutoSize = False
-        Caption = 'LbkvReloadMod'
-        Layout = tlCenter
-        ParentColor = False
+        ButtonCaption = 'Change'
+        ButtonWidth = 52
+        DirectInput = False
+        FocusOnButtonClick = True
+        MaxLength = 0
+        NumGlyphs = 1
+        PasswordChar = #0
+        TabOrder = 6
+        OnButtonClick = ev_kbe_ReloadMod
+        OnClick = ev_kbe_ReloadMod
       end
     end
-    object PgEditRs: TTabSheet
+    object PgEditStations: TTabSheet
       Caption = 'Radio station editor'
-      ClientHeight = 492
-      ClientWidth = 480
-      object LbrSelectStation: TLabel
-        Left = 8
-        Height = 25
-        Top = 16
-        Width = 160
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Currently edited station:'
-        Layout = tlCenter
-        ParentColor = False
-      end
-      object RvSelectStation: TComboBox
-        Left = 176
-        Height = 23
-        Top = 16
-        Width = 288
-        AutoSize = False
-        ItemHeight = 15
-        Style = csDropDownList
-        TabOrder = 0
-        OnChange = ev_SelectStation
-      end
-      object GbrStationProps: TGroupBox
-        Left = 8
-        Height = 448
-        Top = 40
+      ClientHeight = 452
+      ClientWidth = 472
+      object RseStationEditor: TPairSplitter
+        Left = 0
+        Height = 452
+        Top = 0
         Width = 472
-        Caption = 'Radio station properties'
-        ClientHeight = 428
-        ClientWidth = 468
-        TabOrder = 1
-        object LbrSlotCount: TLabel
-          Left = 8
-          Height = 25
-          Top = 0
-          Width = 160
-          Alignment = taRightJustify
-          AutoSize = False
-          Caption = 'Slot count:'
-          Layout = tlCenter
-          ParentColor = False
-        end
-        object RvSlotCount: TSpinEdit
-          Left = 176
-          Height = 25
-          Top = 0
-          Width = 280
-          AutoSize = False
-          MaxValue = 64
-          TabOrder = 0
-          OnChange = ev_Change_rSlotCount
-        end
-        object LbrMasterLoudnessFactor: TLabel
-          Left = 8
-          Height = 25
-          Top = 32
-          Width = 160
-          Alignment = taRightJustify
-          AutoSize = False
-          Caption = 'Loudness factor:'
-          Layout = tlCenter
-          ParentColor = False
-        end
-        object RvMasterLoudnessFactor: TTrackBar
-          Left = 176
-          Height = 25
-          Top = 32
-          Width = 280
-          Max = 100
-          Position = 0
-          OnChange = ev_Change_rLoudnessFactor
-          TabOrder = 1
-        end
-        object LbrName: TLabel
+        Align = alClient
+        Position = 100
+        object RseStationEditorSelectPn: TPairSplitterSide
+          Cursor = crArrow
           Left = 0
-          Height = 25
-          Top = 64
-          Width = 168
-          Alignment = taRightJustify
-          AutoSize = False
-          Caption = 'Radio station name:'
-          Layout = tlCenter
-          ParentColor = False
-        end
-        object RvName: TEdit
-          Left = 176
-          Height = 25
-          Top = 64
-          Width = 280
-          AutoSize = False
-          TabOrder = 2
-          Text = '?Unnamed Station?'
-          OnChange = ev_Change_rName
-        end
-        object RvSelectSlot: TComboBox
-          Left = 176
-          Height = 23
-          Top = 96
-          Width = 280
-          AutoSize = False
-          ItemHeight = 15
-          Style = csDropDownList
-          TabOrder = 3
-          OnChange = ev_SelectSlot
-        end
-        object LbrSelectSlot: TLabel
-          Left = 8
-          Height = 25
-          Top = 96
-          Width = 160
-          Alignment = taRightJustify
-          AutoSize = False
-          Caption = 'Currently edited slot:'
-          Layout = tlCenter
-          ParentColor = False
-        end
-        object GbrSlotProps: TGroupBox
-          Left = 4
-          Height = 296
-          Top = 128
-          Width = 460
-          Caption = 'Slot properties'
-          ClientHeight = 276
-          ClientWidth = 456
-          TabOrder = 4
-          object LbrSlotFileName: TLabel
-            Left = 8
-            Height = 25
+          Height = 452
+          Top = 0
+          Width = 100
+          ClientWidth = 100
+          ClientHeight = 452
+          object RseStationEditorSelect: TListBox
+            Left = 0
+            Height = 452
             Top = 0
-            Width = 168
-            Alignment = taRightJustify
-            AutoSize = False
-            Caption = 'File name or internet address:'
-            Layout = tlCenter
-            ParentColor = False
-          end
-          object RvSlotFileName: TEdit
-            Left = 184
-            Height = 25
-            Hint = 'In case the slot is set to play separate MP3 files, the file name must be the directory, from which the MP3 files will be loaded.'#13#10'Otherwise, use a local or global file name, or a streamable internet URL.'
-            Top = 0
-            Width = 264
-            AutoSize = False
+            Width = 100
+            Align = alClient
+            ClickOnSelChange = False
+            ItemHeight = 0
             TabOrder = 0
-            OnChange = ev_Change_rSlotFileName
+            OnSelectionChange = ev_rse_SelectRadioStation
           end
-          object LbrSlotOwnerList: TLabel
-            Left = 8
-            Height = 25
-            Top = 32
-            Width = 168
-            Alignment = taRightJustify
-            AutoSize = False
-            Caption = 'Owner factions:'
-            Layout = tlCenter
-            ParentColor = False
+        end
+        object RseStationEditorEditPn: TPairSplitterSide
+          Cursor = crArrow
+          Left = 105
+          Height = 452
+          Top = 0
+          Width = 367
+          ClientWidth = 367
+          ClientHeight = 452
+          object RseStationEditorManagePn: TPanel
+            Left = 0
+            Height = 42
+            Top = 0
+            Width = 367
+            Align = alTop
+            BevelOuter = bvNone
+            ClientHeight = 42
+            ClientWidth = 367
+            TabOrder = 0
+            object RseAddStation: TButton
+              Left = 8
+              Height = 25
+              Top = 8
+              Width = 112
+              Caption = 'New radio station'
+              TabOrder = 0
+              OnClick = ev_rse_AddRadioStation
+            end
+            object RseDelStation: TButton
+              Left = 128
+              Height = 25
+              Top = 8
+              Width = 112
+              Caption = 'Delete radio station'
+              TabOrder = 1
+              OnClick = ev_rse_DelRadioStation
+            end
+            object RseMoveStationUp: TBitBtn
+              Left = 256
+              Height = 25
+              Hint = 'Move radio station in list'
+              Top = 8
+              Width = 35
+              Glyph.Data = {
+                36040000424D3604000000000000360000002800000010000000100000000100
+                2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF0042924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF002062230642924AFF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF0042924AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFF6ABD72FF93E89AFF42924AFF42924AFF42924AFF42924AFF4292
+                4AFF42924AFF42924AFF42924AFF42924AFF42924AFFFFFFFF00FFFFFF004292
+                4AFF6ABD72FF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E8
+                9AFF93E89AFF93E89AFF93E89AFF93E89AFF42924AFFFFFFFF00FFFFFF004292
+                4AFF6ABD72FF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E8
+                9AFF93E89AFF93E89AFF93E89AFF93E89AFF42924AFFFFFFFF00FFFFFF00FFFF
+                FF0042924AFF6ABD72FF93E89AFF42924AFF42924AFF42924AFF42924AFF4292
+                4AFF42924AFF42924AFF42924AFF42924AFF42924AFFFFFFFF00FFFFFF00FFFF
+                FF00FFFFFF0042924AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF003C8A430642924AFF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF0042924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
+              }
+              Spacing = 0
+              TabOrder = 2
+              OnClick = ev_rse_MoveRadioStation_Up
+            end
+            object RseMoveStationDown: TBitBtn
+              Left = 296
+              Height = 25
+              Hint = 'Move radio station in list'
+              Top = 8
+              Width = 35
+              Glyph.Data = {
+                36040000424D3604000000000000360000002800000010000000100000000100
+                2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFFFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFF42924AFF3C8A4306FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFFFF004292
+                4AFF42924AFF42924AFF42924AFF42924AFF42924AFF42924AFF42924AFF4292
+                4AFF42924AFF93E89AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF004292
+                4AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E8
+                9AFF93E89AFF93E89AFF93E89AFF6ABD72FF42924AFFFFFFFF00FFFFFF004292
+                4AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E89AFF93E8
+                9AFF93E89AFF93E89AFF93E89AFF6ABD72FF42924AFFFFFFFF00FFFFFF004292
+                4AFF42924AFF42924AFF42924AFF42924AFF42924AFF42924AFF42924AFF4292
+                4AFF42924AFF93E89AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFF6ABD72FF42924AFFFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFF42924AFF20622306FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF0042924AFFFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
+              }
+              Spacing = 0
+              TabOrder = 3
+              OnClick = ev_rse_MoveRadioStation_Down
+            end
           end
-          object RvSlotOwnerList: TEdit
-            Left = 184
-            Height = 25
-            Hint = 'Comma-separated list of technical faction names'
-            Top = 32
-            Width = 264
-            AutoSize = False
+          object RseStationEditorPropertiesPn: TGroupBox
+            Left = 0
+            Height = 410
+            Top = 42
+            Width = 367
+            Align = alClient
+            ClientHeight = 390
+            ClientWidth = 363
             TabOrder = 1
-            OnChange = ev_Change_rSlotOwnerList
-          end
-          object PrSlotOnlyProps: TPanel
-            Left = 0
-            Height = 32
-            Top = 244
-            Width = 456
-            Align = alBottom
-            BevelOuter = bvNone
-            ClientHeight = 32
-            ClientWidth = 456
-            TabOrder = 2
-            object LbrSlotLoudnessFactor: TLabel
+            object LbrLoudnessFactor: TLabel
               Left = 8
-              Height = 25
-              Top = 0
-              Width = 168
+              Height = 24
+              Top = 8
+              Width = 144
               Alignment = taRightJustify
               AutoSize = False
-              Caption = 'Loudness factor:'
+              Caption = 'Loudness:'
               Layout = tlCenter
-              ParentColor = False
             end
-            object RvSlotLoudnessFactor: TTrackBar
-              Left = 184
-              Height = 25
-              Top = 0
-              Width = 264
+            object RvLoudnessFactor: TTrackBar
+              Left = 160
+              Height = 50
+              Hint = 'The individual master loudness of the radio station.'#13#10'This influences signal weakening.'
+              Top = 8
+              Width = 144
               Max = 100
-              Position = 0
-              OnChange = ev_Change_rSlotLoudnessFactor
+              PageSize = 20
+              Position = 100
+              ShowSelRange = False
+              OnChange = ev_rse_LoudnessFactor
               TabOrder = 0
             end
-          end
-          object LbrSlotEffectiveRange: TLabel
-            Left = 8
-            Height = 25
-            Top = 64
-            Width = 168
-            Alignment = taRightJustify
-            AutoSize = False
-            Caption = 'Effective range (km):'
-            Layout = tlCenter
-            ParentColor = False
-          end
-          object RvSlotEffectiveRange: TFloatSpinEdit
-            Left = 184
-            Height = 25
-            Top = 64
-            Width = 264
-            AutoSize = False
-            Increment = 10
-            MaxValue = 16000
-            TabOrder = 3
-            Value = 16000
-            OnChange = ev_Change_rSlotDampeningFactor
-          end
-          object LbrSlotUseMP3: TLabel
-            Left = 8
-            Height = 25
-            Top = 96
-            Width = 168
-            Alignment = taRightJustify
-            AutoSize = False
-            Caption = 'Play MP3 files in this slot:'
-            Layout = tlCenter
-            ParentColor = False
-          end
-          object RvSlotUseMP3: TComboBox
-            Left = 184
-            Height = 23
-            Hint = 'If turned on, the slot will play separate MP3 files, similarly to the MP3 player radio station'
-            Top = 96
-            Width = 264
-            AutoSize = False
-            ItemHeight = 15
-            ItemIndex = 0
-            Items.Strings = (
-              'No'
-              'Yes'
-            )
-            Style = csDropDownList
-            TabOrder = 4
-            Text = 'No'
-            OnChange = ev_Change_rIsMP3
-          end
-          object PrSlotMP3OnlyProps: TPanel
-            Left = 0
-            Height = 120
-            Top = 124
-            Width = 456
-            Align = alBottom
-            BevelOuter = bvNone
-            ClientHeight = 120
-            ClientWidth = 456
-            TabOrder = 5
-            object RvSlotOrderMP3: TMemo
-              Left = 184
-              Height = 82
-              Hint = 'Preferred order of MP3 files. Use LOCAL file names, 1 file per line.'
-              Top = 32
-              Width = 264
-              ScrollBars = ssAutoBoth
-              TabOrder = 0
-              WordWrap = False
-              OnChange = ev_Change_rSlotOrderMP3
-            end
-            object LbrSlotOrderMP3: TLabel
+            object LbrName: TLabel
               Left = 8
-              Height = 31
-              Top = 32
-              Width = 168
+              Height = 24
+              Top = 40
+              Width = 144
               Alignment = taRightJustify
               AutoSize = False
-              Caption = 'MP3 file ordering:'
+              Caption = 'Name:'
               Layout = tlCenter
-              ParentColor = False
             end
-            object LbrSlotUseOrderMP3: TLabel
+            object RvName: TEdit
+              Left = 160
+              Height = 24
+              Hint = 'Text to be be shown upon changing radio stations during gameplay.'
+              Top = 40
+              Width = 144
+              AutoSize = False
+              MaxLength = 64
+              TabOrder = 1
+              OnChange = ev_rse_Name
+            end
+            object LbrEnabled: TLabel
               Left = 8
-              Height = 31
-              Top = 0
-              Width = 168
+              Height = 24
+              Top = 72
+              Width = 144
               Alignment = taRightJustify
               AutoSize = False
-              Caption = 'Keep MP3 files ordered:'
+              Caption = 'Enabled:'
               Layout = tlCenter
-              ParentColor = False
             end
-            object RvSlotUseOrderMP3: TComboBox
-              Left = 184
+            object RvEnabled: TComboBox
+              Left = 160
               Height = 23
-              Hint = 'If turned on, the MP3 files will keep their order, according to the file list specified below'
-              Top = 0
-              Width = 264
+              Hint = 'Whether this radio station is enabled.'#13#10'Useful for testing or debugging purposes.'
+              Top = 72
+              Width = 144
               AutoSize = False
               ItemHeight = 15
-              ItemIndex = 0
+              ItemIndex = 1
               Items.Strings = (
                 'No'
                 'Yes'
               )
               Style = csDropDownList
-              TabOrder = 1
-              Text = 'No'
-              OnChange = ev_Change_rOrderMP3
+              TabOrder = 2
+              Text = 'Yes'
+              OnChange = ev_rse_Enabled
+            end
+            object RseStationEditorSlotEditor: TPairSplitter
+              Left = 0
+              Height = 286
+              Top = 104
+              Width = 363
+              Align = alClient
+              BorderSpacing.Top = 104
+              Position = 50
+              object RseStationEditorSlotSelectPn: TPairSplitterSide
+                Cursor = crArrow
+                Left = 0
+                Height = 286
+                Top = 0
+                Width = 50
+                ClientWidth = 50
+                ClientHeight = 286
+                object RseStationEditorSlotSelect: TListBox
+                  Left = 0
+                  Height = 286
+                  Top = 0
+                  Width = 50
+                  Align = alClient
+                  ClickOnSelChange = False
+                  ItemHeight = 0
+                  TabOrder = 0
+                  OnSelectionChange = ev_rse_SelectRadioStationSlot
+                end
+              end
+              object RseStationEditorSlotEditPn: TPairSplitterSide
+                Cursor = crArrow
+                Left = 55
+                Height = 286
+                Top = 0
+                Width = 308
+                ClientWidth = 308
+                ClientHeight = 286
+                object RseStationEditorSlotManagePn: TPanel
+                  Left = 0
+                  Height = 42
+                  Top = 0
+                  Width = 308
+                  Align = alTop
+                  BevelOuter = bvNone
+                  ClientHeight = 42
+                  ClientWidth = 308
+                  TabOrder = 0
+                  object RseAddSlot: TButton
+                    Left = 8
+                    Height = 25
+                    Top = 8
+                    Width = 112
+                    Caption = 'New track'
+                    TabOrder = 0
+                    OnClick = ev_rse_AddRadioSlot
+                  end
+                  object RseDelSlot: TButton
+                    Left = 128
+                    Height = 25
+                    Top = 8
+                    Width = 112
+                    Caption = 'Delete track'
+                    TabOrder = 1
+                    OnClick = ev_rse_DelRadioSlot
+                  end
+                end
+                object RseStationEditorSlotPropertiesPn: TGroupBox
+                  Left = 0
+                  Height = 244
+                  Top = 42
+                  Width = 308
+                  Align = alClient
+                  ClientHeight = 224
+                  ClientWidth = 304
+                  TabOrder = 1
+                  object RseStationEditorSlotPropertiesPnScroll: TScrollBox
+                    Left = 0
+                    Height = 224
+                    Top = 0
+                    Width = 304
+                    HorzScrollBar.Page = 287
+                    VertScrollBar.Page = 207
+                    Align = alClient
+                    BorderStyle = bsNone
+                    ClientHeight = 207
+                    ClientWidth = 287
+                    TabOrder = 0
+                    object LbrSlotLoudnessFactor: TLabel
+                      Left = 0
+                      Height = 24
+                      Top = 8
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'Loudness:'
+                      Layout = tlCenter
+                    end
+                    object RvSlotLoudnessFactor: TTrackBar
+                      Left = 152
+                      Height = 50
+                      Hint = 'The individual loudness of this track'#13#10'This influences signal weakening.'
+                      Top = 8
+                      Width = 144
+                      Max = 100
+                      PageSize = 20
+                      Position = 100
+                      ShowSelRange = False
+                      OnChange = ev_rse_SlotLoudnessFactor
+                      TabOrder = 0
+                    end
+                    object LbrSlotRangeKm: TLabel
+                      Left = 0
+                      Height = 24
+                      Top = 40
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'Effective range (km):'
+                      Layout = tlCenter
+                    end
+                    object RvSlotRangeKm: TFloatSpinEdit
+                      Left = 152
+                      Height = 24
+                      Hint = 'The distance at which the effective strength gets below 50%.'#13#10'This influences signal weakening.'
+                      Top = 40
+                      Width = 144
+                      AutoSize = False
+                      Increment = 100
+                      MaxValue = 1000000
+                      TabOrder = 1
+                      Value = 16000
+                      OnChange = ev_rse_SlotRangeKm
+                    end
+                    object LbrSlotOwnerList: TLabel
+                      Left = 2
+                      Height = 24
+                      Top = 72
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'Owners:'
+                      Layout = tlCenter
+                    end
+                    object RvSlotOwnerList: TEditButton
+                      Left = 152
+                      Height = 24
+                      Hint = 'Comma-separated list of owner factions; use technical faction names instead of the human readable names.'#13#10'Required for signal weakening.'
+                      Top = 72
+                      Width = 144
+                      AutoSize = False
+                      ButtonCaption = 'Change'
+                      ButtonWidth = 52
+                      FocusOnButtonClick = True
+                      MaxLength = 65536
+                      NumGlyphs = 1
+                      PasswordChar = #0
+                      TabOrder = 2
+                      OnButtonClick = ev_rse_SlotOwnerList
+                      OnClick = ev_rse_SlotOwnerList
+                    end
+                    object LbrSlotIsMP3: TLabel
+                      Left = 2
+                      Height = 24
+                      Top = 104
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'Play MP3 in this track:'
+                      Layout = tlCenter
+                    end
+                    object RvSlotIsMP3: TComboBox
+                      Left = 152
+                      Height = 23
+                      Hint = 'Whether to play multiple files in this track.'#13#10'User interactions can be explicitly disabled, even if all other factors would allow user interaction.'
+                      Top = 104
+                      Width = 144
+                      AutoSize = False
+                      ItemHeight = 15
+                      ItemIndex = 0
+                      Items.Strings = (
+                        'No'
+                        'Yes'
+                        'Yes (disable user interaction)'
+                      )
+                      Style = csDropDownList
+                      TabOrder = 3
+                      Text = 'No'
+                      OnChange = ev_rse_SlotIsMP3
+                    end
+                    object LbrSlotFileName: TLabel
+                      Left = 2
+                      Height = 24
+                      Top = 136
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'File name or internet URL:'
+                      Layout = tlCenter
+                    end
+                    object RvSlotFileName: TEditButton
+                      Left = 152
+                      Height = 24
+                      Hint = 'For MP3 tracks: this must be a directory containing the music files.'#13#10'For single-file tracks, this must be a local file or a streamable internet URL.'
+                      Top = 136
+                      Width = 144
+                      AutoSize = False
+                      ButtonWidth = 24
+                      FocusOnButtonClick = True
+                      Glyph.Data = {
+                        36040000424D3604000000000000360000002800000010000000100000000100
+                        2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0002AAD5FD00AA
+                        D4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AA
+                        D4FF00AAD4FF00AAD4FF00AAD4FF01ABD4F500A4DB0EFFFFFF0005ACD5FF3AC3
+                        E9FF55CFF4FF51CEF4FF4CCDF4FF48CCF4FF43CBF4FF3FCAF4FF3AC9F4FF36C8
+                        F4FF31C7F4FF31C7F4FF31C7F4FF0EB1DCF200AAD55AFFFFFF0000AAD4FF28B9
+                        DEFF6CD4F4FF67D3F4FF63D2F4FF5ED1F4FF5AD0F4FF55CFF4FF51CEF4FF4CCD
+                        F4FF48CCF4FF43CBF4FF3FCAF4FF25BDE8FF04ACD6BCFFFFFF0000AAD4FF0BAD
+                        D7FF7BD6F3FF7ED8F4FF79D7F4FF75D6F4FF70D5F4FF6CD4F4FF67D3F4FF63D2
+                        F4FF5ED1F4FF5AD0F4FF55CFF4FF4DCCF3FF02AAD6F700A4DB0E00AAD4FF3CBF
+                        E0FF63CCE9FF94DDF4FF90DCF4FF8BDBF4FF87DAF4FF82D9F4FF7ED8F4FF79D7
+                        F4FF75D6F4FF70D5F4FF6CD4F4FF67D3F4FF1AB5DCF200AAD55A00AAD4FF82D8
+                        EFFF36BDDEFFA6E1F4FFA6E1F4FFA2E0F4FF9DDFF4FF98DEF4FF94DDF4FF90DC
+                        F4FF8BDBF4FF87DAF4FF82D9F4FF7ED8F4FF4DC6E8FF08AED6BC00AAD4FFC1EF
+                        FDFF0BAED7FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AA
+                        D4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF00AAD4FF03AAD5EB00AAD4FFCCF3
+                        FFFFCCF3FFFFCCF3FFFFCCF3FFFFCCF3FFFFEC945AFFF49659FFF29254FFEC83
+                        3EFFD47C3CFF48D2F4FF41CFF2FF22C4ECFF00B9E5E4FFFFFF0000AAD4FFCCF3
+                        FFFFCCF3FFFFCCF3FFFFCCF3FFFFCCF3FFFFEF9E67FFFCAA75FFF8A169FFEF8B
+                        4AFFD87E3DFF70E0FCFF5FDAF8FF33CAEFFF06B9E6E7FFFFFF0000AAD4FFCCF3
+                        FFFFCCF3FFFFCCF3FFFFCCF3FFFFCCF3FFFFDCC8B3FFF79F66FFF59A5FFFEE88
+                        45FF756998FF5BD9F7FF50D5F5FF2CC8EEFF00B9E56DFFFFFF0003ABD4FBBEEE
+                        FCFFCCF3FFFFCCF3FFFFBEEEFCFF09ADD6FA00AAD4FF39A2B2FF76629EFF5D43
+                        C2FF2D2DEEFF193EEAFF1372E6FF06AFD9F6FFFFFF00FFFFFF000BAED78702AB
+                        D4FB00AAD4FF00AAD4FF02ABD4FB0BAED787FFFFFF00FFFFFF003E3EF2F35E5E
+                        F8FF5353F6FF2D2DEEFF0202E5F2FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF004545F3BC6E6E
+                        FBFF5E5EF8FF3232EFFF0505E6BAFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+                        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF003131EF1F4545
+                        F3BC3E3EF2F41F1FECBB0000E61EFFFFFF00FFFFFF00FFFFFF00
+                      }
+                      MaxLength = 0
+                      NumGlyphs = 1
+                      PasswordChar = #0
+                      TabOrder = 4
+                      OnButtonClick = ev_rse_SlotFileName
+                      OnClick = ev_rse_SlotFileName
+                    end
+                    object LbrSlotOrdered: TLabel
+                      Left = 0
+                      Height = 24
+                      Top = 168
+                      Width = 144
+                      Alignment = taRightJustify
+                      AutoSize = False
+                      Caption = 'MP3 list is ordered:'
+                      Layout = tlCenter
+                    end
+                    object RvSlotOrdered: TComboBox
+                      Left = 152
+                      Height = 23
+                      Hint = 'Whether the MP3 files should be played in a pre-defined order.'#13#10'To pre-define the playback order, use the text box below.'
+                      Top = 168
+                      Width = 144
+                      AutoSize = False
+                      ItemHeight = 15
+                      ItemIndex = 0
+                      Items.Strings = (
+                        'No'
+                        'Yes'
+                      )
+                      Style = csDropDownList
+                      TabOrder = 5
+                      Text = 'No'
+                      OnChange = ev_rse_SlotOrdered
+                    end
+                    object RvSlotOrderList: TMemo
+                      Left = 0
+                      Height = 280
+                      Hint = 'The mod will follow this pre-defined order. Requires MP3 playback mode and ''ordered'' playback to be enabled for this track.'#13#10'Each line must contain only one file name; use only the file names, not the full paths.'#13#10'Audio files, which are present in the directory, but are missing from the list, are subject to randomization.'
+                      Top = 200
+                      Width = 296
+                      Align = alClient
+                      BorderSpacing.Top = 200
+                      Constraints.MinHeight = 280
+                      ScrollBars = ssAutoBoth
+                      TabOrder = 6
+                      OnChange = ev_rse_SlotOrderList
+                    end
+                  end
+                end
+              end
             end
           end
         end
       end
     end
-    object PgEditMP3: TTabSheet
-      Caption = 'MP3 player settings'
-      ClientHeight = 492
-      ClientWidth = 480
-      object LbmEnable: TLabel
-        Left = 0
-        Height = 25
-        Top = 8
-        Width = 196
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Enable MP3 player radio station:'
-        Layout = tlCenter
-        ParentColor = False
+  end
+  object MnuMain: TMainMenu
+    Images = MnuMain_Images
+    Left = 16
+    Top = 432
+    object MnuFile: TMenuItem
+      Caption = 'File'
+      object MnuFile_New: TMenuItem
+        Caption = 'New'
+        ImageIndex = 0
+        OnClick = ev_MnuNew
       end
-      object MvEnable: TComboBox
-        Left = 208
-        Height = 23
-        Top = 8
-        Width = 264
-        AutoSize = False
-        ItemHeight = 15
-        ItemIndex = 0
-        Items.Strings = (
-          'No'
-          'Yes'
-        )
-        Style = csDropDownList
-        TabOrder = 0
-        Text = 'No'
-        OnChange = ev_Change_mEnable
+      object MnuFile_Load: TMenuItem
+        Caption = 'Open'
+        ImageIndex = 1
+        OnClick = ev_MnuLoad
       end
-      object LbmLoudnessFactor: TLabel
-        Left = 0
-        Height = 25
-        Top = 40
-        Width = 196
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Loudness factor:'
-        Layout = tlCenter
-        ParentColor = False
+      object MnuFile_Save: TMenuItem
+        Caption = 'Save'
+        ImageIndex = 2
+        OnClick = ev_MnuSave
       end
-      object MvLoudnessFactor: TTrackBar
-        Left = 208
-        Height = 25
-        Top = 40
-        Width = 264
-        Max = 100
-        Position = 0
-        OnChange = ev_Change_mLoudnessFactor
-        TabOrder = 1
+      object MnuFile_Close: TMenuItem
+        Caption = 'Close'
+        ImageIndex = 3
+        OnClick = ev_MnuClose
       end
-      object LbmName: TLabel
-        Left = 0
-        Height = 25
-        Top = 72
-        Width = 196
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = 'Radio station name:'
-        Layout = tlCenter
-        ParentColor = False
+      object MnuFile_Exit: TMenuItem
+        Caption = 'Exit'
+        ImageIndex = 4
+        OnClick = ev_MnuExit
       end
-      object MvName: TEdit
-        Left = 208
-        Height = 25
-        Top = 72
-        Width = 264
-        AutoSize = False
-        TabOrder = 2
-        Text = '?Unnamed MP3 Station?'
-        OnChange = ev_Change_mName
+    end
+    object Mnu_Help: TMenuItem
+      Caption = 'Help'
+      object MnuHelp_About: TMenuItem
+        Caption = 'About'
+        ImageIndex = 5
+        OnClick = ev_MnuAbout
+      end
+      object MnuHelp_ConvertOld: TMenuItem
+        Caption = 'Convert old settings'
+        ImageIndex = 6
+        OnClick = ev_MnuConvertOld
+      end
+      object MnuHelp_ShowHelp: TMenuItem
+        Caption = 'Show help'
+        ImageIndex = 7
+        OnClick = ev_MnuShowHelp
       end
     end
   end
-  object BtSelectFile: TButton
-    Left = 8
-    Height = 25
-    Top = 528
-    Width = 160
-    Caption = 'Load X4 ORS ''settings.ini'''
-    TabOrder = 1
-    OnClick = ev_SelectFile
+  object MnuMain_Images: TImageList
+    Left = 56
+    Top = 432
+    Bitmap = {
+      4C7A080000001000000010000000250A00000000000078DADD980B54D4551EC7
+      6F51AE6EEDA9CDEDE19EECF4D8ECA1226916D9B66E0F8516234B278F48AC09E6
+      69532B0D254545C228415442B32D245EA903280AE2135044908708F300128699
+      E13DC030C3F077461EF2DD7B67FEE8300CF3D8D5DDCEDE733E67EEFFFEEFE7FE
+      7EF7F19F1700020A292DBDD3F87AACE998F9B52310215CC8B1C65272A2F96992
+      D554428E377A91A38D698EFAC6318E364E9874BEBDE6935AC395B1D9AA5272BC
+      E13E87DDACA6E32CFEA7D455F5019E651A904C05C8118A50328C3B52A4DDC3E3
+      3778B2B8CC7DBEA00D92AEAB407F2FD0475F7B0D40CF15E02A071874C63186CD
+      3FABE9203924BF97642A5145DD0F2BD4D4A36E8F9E7AD435D0907A1D70453BCC
+      1F32568682C6ECE163EAF998CCEDA2AE06E03A6DFBEC9E45BED06B7997E6D4DD
+      61DFBF9E6F97315F1613DDD4D5B5035D6DF67D63CC1BF9B298265705685BECFB
+      16F942D746DD56A30B4D937D7F48BE2C267535CD406713A06EB0EF5F8FA9E263
+      32B7D1E8A24369DFB7C8D7E4D65397EE6DBBDCBE6F912F8B8976EAB6D5012A99
+      4D9F9D6D6B677EE8F997743BF36CDE4AEE3A58157E7B8AA46F303756676D8EFA
+      2EB47F4E673F4AE98C18AC3E26ADB2D7D6FC5DCC9E7F763DE83A8AF9FADF0C3F
+      4F7B0D771FAC82BD7D1B3E0F899ABD46C974703D29C3CF4A6E4412141C62E51C
+      F6D47188917108B8D886DF1EAC2C62FEBB179AE14B19EC1B6FD177472D87881A
+      0E5F5DE610FA0B870DD51CA69C561A6E4F91AE66FE8319D508916A86F40DE7FB
+      6EA47DBFA8E21058C9E1532987E5120ECBC41C46A7557264BFF819E68F3D5C6D
+      B3AFBF88835F05079F720E824B1CDEB8A0814BAAB483ADDF6D29123C975D3F62
+      DF77CA38CCB9C8C1B394C3EB251C66167378F454F3804B6A551CF3EF4CADC4CC
+      FCB611FBCE28E2F0C2050ECF15DEE0AEF4CB5DE480E42DE6D335B8E6ECBEDD26
+      94724428BDFB57F10C267D08240600094B809F16A3B5A5C526D8E50DC4CC5162
+      B7D7E3469FB9F12617717E50D6D50E037BDE0576CF35D563E600DFFE0DD8E929
+      37FA662EF6FAE2B254340CE6B2B8C6BAC90576CC363D43662E7EF481B8B47018
+      7CCEA6FAA0BBFD0D931FF73E10BB88BA0B811F16A0F4DC699B5C77A35E33F966
+      2EFE29A0739D077CF70ECDF96D1A971E91182F20FA4D1AD783BAB3A8FB3AB0ED
+      552072A6C9B7E57E6BC38D78C5E40FBA57D95B9A03857D2E3377EBCB26FF7B3E
+      AE33E51BEA7EFD92C91FCC9996E6E666BB180B73C35F34F983F375A630F7ABE9
+      269FDF5BA7E233376C9AC91F3C8FCE94B0A9C0976E269FB9D19ECEF9CC0D7535
+      F9D1A6F348E863E82846376492C9373F8FDBFE4AF7F62F746FFF4CF768065D67
+      773AD717802DCFDFC87933EF6E7A16BF96EF00370B42708E524A79C0CABD07F8
+      7BE76CF8C5145A81D87C0CDE15F3F78A6DF8F753447CBF2ACA382B6D0FD99983
+      79FFCB944A475D8B31063D468DA3AE0D7F9C13EE48F98F73C235CED7DA9ADEC2
+      FDFB8FCECFFFE1F3E44F59E3A4730F65145F3FC2D68CAF8F62F7ECB8028A9612
+      61C58FA06828F36CB8D7287994F156FCF1947C4A3F65BE85FB20A58B77479BB5
+      5FF7F9EBD1FC182CC7FBCDDAC328BD94272CC61DE2F36D4F52FA28A1666DEC7C
+      9FB032A7613EDF7E8A72C9ECDA40D9EAE8FED1B6480A6776ADB7E6DBD8A7080B
+      FF12E5A413BE65FE5FF26BF28403EE047E0F375BEC9F8E7296F21B1BAEF9FE3D
+      6071EF3DB3F3F38415F749DEBD66E30CBEC78FCDF23BC9AF73243FDF7EFEFCCE
+      B733BF87F8F528A75CE161F55036CF9BFF8CFFBA8AE738F287E4D7C8C792F9E4
+      9254403A250222A71CD8FF0A99FEE018E262CFAF7C97ECA2FDF53C25945ACA00
+      459A388BBC64CB8D7A89B8D17EA071B9F209C4DD9DB64D194BC664CF213B593B
+      E5B02D7FFB0CF227EA8649DF23EBDC878EFB013F6EB1B3EBB1660A798D7A62EA
+      F788169260675CBF09641A3F7F967BCAE7D3C81F1D75673F4C2650A79CAD238D
+      BBF7FD67C81DCEC4A6BE1773A5F34941E054F2B0B3F33E2E209EF40C54D77892
+      9D6FDD4B6E73D6A767E51E9AC364AFFBC8230FFF1BE790BA02B66EDBDC8990FC
+      0FFCFF56B955DF1D0A0B4156AE6C19CF6075471CB1B87B545E9EF6B9B56BE501
+      2B56D4176CDFAEEBA3F4D37AD9FAF58A15F9F9DA1745226EC4F7F7E0E0DA006F
+      6FC9D9CD9B3B7A0E1C00844213AC1E16A6EE9D3B57521814245B3A921F1DAD16
+      06061AE0E7D7D4E1E7A768FDFCF396AED5AB555DDEDECA7637B746D5A449FA81
+      C040B5D0961F12427F5E5182827AE0EBDBA8A39E6EE2C41E3C4B7F6E31ACF9A2
+      C6C231116736B87B2EFFE9FCA0CF58B64C0D5757F57577247FFDA1452BBC621E
+      CF5FB42AADC79EBF664DFB30FFDBE250E146491096A42CE104C1BBF48B3E3D6A
+      58BD4AD5BB64890A53A6A8E0FE8216010B6AB067E319D424455DA98D5E9C551D
+      B3D4BB47ABBA77D00FAF0B0763536530FC8402C321BA00DFF8EFD6842E4EE0B2
+      630EA033370DD78AF6A133FDABABB2E8C5F25F36BEDEA113E77A5AFA8C8F737D
+      A08E5D0664844097B4B25FB17D4163EDB685DADAB03765ED5BDF34F4ED9E077D
+      F45CE8ABF204CC8FCA5F27DC220BB3EA9BD884FA88777065E7DB30FEDF4131F7
+      932F448D0DD8E7B9D23B797AC6AAC2A5ADFE59DE0343FD103446CD373AD67C46
+      435703C9920A7F177D7EC3CC193B7EBF4E1E39BF4EBF7FB555BFFFBB79680EF7
+      E8D44972678D749638A5C8A5362168727D7C6074CB2EBF0B75E173742D5F7BC8
+      EA772CD8274F0AFE40753669B423CF54AF56E5D25991FD88569CEBA1A9C89ECA
+      2944A36EF6E7BF42F8E563F2B4881065FA8EE3F243DBA4B5A911B9D5499BC3C4
+      7BD78FAF8A0B7AB422362852141B5C5011BBAEBAFC8735A74BA3576C2E8A0878
+      8CB9F2D4AD0B150723F5CD459957D57229BA5AEBD121AF84323FBD5712B7CE50
+      F1C35A83E2DCA1DE3699149A66395AABCBF04BD64F570B2297E9CF84FB2E94A5
+      7C1DD5527E0603030337FEE2D2EBD1D4D40485AC16720AABB3B6C1C2FAD6E4A6
+      2227D4675BEDFEF0B8564901140A05D2D3D391989848DF2F0E2037371762B118
+      229108870F1F4652521292939371E2C409B4B7B743763E13A74216ECAD4C0C3D
+      D4565D0AB55A6DA4BFBF1F6D6D6DC8CECE36FA128904172F5E8446A3415F5F1F
+      944AA53196B234072736080E4AE282B3DB6ACA9D8EDF509E8FCC2FE69EBEF47D
+      60B14A5AE474FC86B25CA47FE659541CBDBCAAB522CF6A7CE6B2318E1C39628C
+      3D247EC929A4FE63666541C45265EBC5D343E2B3FB393939465F2A95A2ACAC0C
+      5AAD7648FCA6A22CECF377579CDDE2DBDE5A726CC8DF630683C1F85F1D7319AC
+      CEDACC4B53610612FCDCDA4E6F14742B8EEE414B7E1AEAD27742961A0139BD56
+      94E4505762445E920D79E61EE33DD6C7D8376337127C5DBB8F0579F79D099EDB
+      7B72AD9726F3B3D9BA8C4FDED01C5F3DAB3B7FC35B28DFBB1EE5B1EB91B7CE0B
+      E91FCDE8FE79F1544DF2DFA7E85202A66B3257BCD21BEF33B9EFE82A8FF88CCF
+      6607A72E7FD543F8D1CB4F0997CE70DBEFEF1EB0DFFF79C5E10FA7F7A42F9DD6
+      93E8EBAA885F383120CE67A25BACAFEB53093E133D127C260727FAB8C68FF44C
+      FD2898785FC2A2C91BE37D266D8AF77B7AECADFAFCFF174993FE9D
+    }
   end
-  object TmrUpdate: TTimer
-    Interval = 250
-    OnTimer = ev_Update
-    Left = 456
-    Top = 512
+  object DlgOpenFile: TOpenDialog
+    Title = 'Load settings'
+    FileName = 'x4_ors_settings.json'
+    Filter = 'X4 ORS settings|x4_ors_settings.json'
+    Options = [ofPathMustExist, ofFileMustExist, ofNoTestFileCreate, ofNoDereferenceLinks, ofNoResolveLinks, ofEnableSizing, ofDontAddToRecent]
+    Left = 16
+    Top = 384
   end
-  object DlgSelectFile: TOpenDialog
-    Title = 'Select an INI file to edit'
-    Filter = 'X4 ORS settings INI|settings.ini'
-    Options = [ofReadOnly, ofFileMustExist, ofEnableSizing, ofDontAddToRecent]
-    Left = 408
-    Top = 512
+  object DlgSaveFile: TSaveDialog
+    Title = 'Save settings'
+    FileName = 'x4_ors_settings.json'
+    Filter = 'X4 ORS settings|x4_ors_settings.json'
+    Options = [ofNoDereferenceLinks, ofNoResolveLinks, ofEnableSizing, ofDontAddToRecent, ofViewDetail]
+    Left = 56
+    Top = 384
+  end
+  object DlgOpenFileOld: TOpenDialog
+    Title = 'Convert old settings'
+    Filter = 'Old X4 ORS settings|settings.ini'
+    Options = [ofPathMustExist, ofFileMustExist, ofNoTestFileCreate, ofNoDereferenceLinks, ofNoResolveLinks, ofEnableSizing, ofDontAddToRecent]
+    Left = 96
+    Top = 384
   end
 end

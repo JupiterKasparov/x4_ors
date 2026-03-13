@@ -5,126 +5,141 @@ unit editor;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, ComCtrls, Spin, Windows, IniFiles, Math;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComCtrls, Menus,
+  StdCtrls, Spin, EditBtn, ExtCtrls, PairSplitter, LCLType, LCLIntf, Buttons,
+  Math, fpjson, u_filechooser, u_texteditor, u_keyeditor, u_jsonmanager,
+  u_oldconvert, u_osutils;
 
 type
 
   { TFrmEditor }
 
   TFrmEditor = class(TForm)
-    BtkModifier1: TButton;
-    BtkModifier2: TButton;
-    BtSelectFile: TButton;
-    BtkNextStation: TButton;
-    BtkPrevStation: TButton;
-    BtkReloadMod: TButton;
-    BtkReplayMP3: TButton;
-    BtkSkipMP3: TButton;
-    GbrStationProps: TGroupBox;
-    GbrSlotProps: TGroupBox;
-    LbrSlotOrderMP3: TLabel;
-    LbrSlotUseOrderMP3: TLabel;
-    PrSlotMP3OnlyProps: TPanel;
-    RvSlotOrderMP3: TMemo;
-    RvSlotUseMP3: TComboBox;
-    LbrName: TLabel;
-    LbrSelectSlot: TLabel;
-    LbrSlotEffectiveRange: TLabel;
-    LbrSlotUseMP3: TLabel;
+    RseMoveStationUp: TBitBtn;
+    DlgOpenFile: TOpenDialog;
+    DlgOpenFileOld: TOpenDialog;
     LbrSlotFileName: TLabel;
-    LbrSlotCount: TLabel;
-    LbrMasterLoudnessFactor: TLabel;
+    LbrSlotIsMP3: TLabel;
     LbrSlotLoudnessFactor: TLabel;
+    LbrSlotOrdered: TLabel;
     LbrSlotOwnerList: TLabel;
-    PrSlotOnlyProps: TPanel;
-    RvName: TEdit;
-    RvMasterLoudnessFactor: TTrackBar;
-    RvSlotEffectiveRange: TFloatSpinEdit;
-    RvSlotFileName: TEdit;
-    RvSelectSlot: TComboBox;
-    RvSelectStation: TComboBox;
-    LbrSelectStation: TLabel;
-    MvName: TEdit;
-    LbmName: TLabel;
-    MvLoudnessFactor: TTrackBar;
-    LbmLoudnessFactor: TLabel;
-    MvEnable: TComboBox;
-    GvRandomizeTracks: TComboBox;
-    GvLatency: TSpinEdit;
-    GvOnlineStreams: TComboBox;
+    LbrSlotRangeKm: TLabel;
+    MnuHelp_ShowHelp: TMenuItem;
+    MnuFile_New: TMenuItem;
+    RseMoveStationDown: TBitBtn;
+    RvSlotOrderList: TMemo;
+    RseStationEditorSlotPropertiesPn: TGroupBox;
+    LbrEnabled: TLabel;
+    LbrLoudnessFactor: TLabel;
+    LbrName: TLabel;
+    RseAddSlot: TButton;
+    RseDelSlot: TButton;
+    RseStationEditorSlotManagePn: TPanel;
+    RseStationEditorSlotEditor: TPairSplitter;
+    RseStationEditorSlotSelectPn: TPairSplitterSide;
+    RseStationEditorSlotEditPn: TPairSplitterSide;
+    RseAddStation: TButton;
+    RseDelStation: TButton;
+    RseStationEditor: TPairSplitter;
+    RseStationEditorPropertiesPn: TGroupBox;
+    RseStationEditorManagePn: TPanel;
+    RseStationEditorSelectPn: TPairSplitterSide;
+    RseStationEditorEditPn: TPairSplitterSide;
+    RseStationEditorSelect: TListBox;
+    KvModifier1: TEditButton;
+    GvRandomTracks: TComboBox;
     GvLinearVolume: TComboBox;
-    LbmEnable: TLabel;
-    LbgLoudnessFactor: TLabel;
-    LbgLinearVolume: TLabel;
-    LbgOnlineStreams: TLabel;
-    LbgRandomizeTracks: TLabel;
+    KvModifier2: TEditButton;
+    KvReloadMod: TEditButton;
+    KvReplayMP3: TEditButton;
+    KvPrevStation: TEditButton;
+    KvNextStation: TEditButton;
+    KvNextMP3: TEditButton;
     LbgLatency: TLabel;
-    LbgNoOfStations: TLabel;
     LbkModifier1: TLabel;
-    LbkvModifier1: TLabel;
+    LbgLoudnessFactor: TLabel;
+    LbgRandomTracks: TLabel;
+    LbgLinearVolume: TLabel;
     LbkModifier2: TLabel;
-    LbkvModifier2: TLabel;
-    LbkNextStation: TLabel;
-    LbkvNextStation: TLabel;
-    LbkPrevStation: TLabel;
-    LbkvPrevStation: TLabel;
-    LbkReloadMod: TLabel;
-    LbkvReloadMod: TLabel;
+    LbkReload: TLabel;
     LbkReplayMP3: TLabel;
-    LbkvReplayMP3: TLabel;
-    LbkSkipMP3: TLabel;
-    LbkvSkipMP3: TLabel;
-    DlgSelectFile: TOpenDialog;
+    LbkPrevStation: TLabel;
+    LbkNextStation: TLabel;
+    LbkNextMP3: TLabel;
+    MnuHelp_ConvertOld: TMenuItem;
+    MnuHelp_About: TMenuItem;
+    MnuMain_Images: TImageList;
+    MnuFile_Exit: TMenuItem;
+    MnuFile_Close: TMenuItem;
+    Mnu_Help: TMenuItem;
+    MnuFile_Save: TMenuItem;
+    MnuFile_Load: TMenuItem;
+    MnuFile: TMenuItem;
+    MnuMain: TMainMenu;
     PgEditorPages: TPageControl;
     PgEditGlobal: TTabSheet;
     PgEditKeys: TTabSheet;
-    GvNoOfStations: TSpinEdit;
-    PgEditMP3: TTabSheet;
-    PgEditRs: TTabSheet;
-    RvSlotCount: TSpinEdit;
-    RvSlotLoudnessFactor: TTrackBar;
-    RvSlotOwnerList: TEdit;
-    RvSlotUseOrderMP3: TComboBox;
-    TmrUpdate: TTimer;
+    PgEditStations: TTabSheet;
+    GvMaxLatency: TSpinEdit;
     GvLoudnessFactor: TTrackBar;
-    procedure ev_CanClose(Sender: TObject; var CanClose: boolean);
-    procedure ev_Change_gLatency(Sender: TObject);
-    procedure ev_Change_gLinearVolume(Sender: TObject);
-    procedure ev_Change_gLoudnessFactor(Sender: TObject);
-    procedure ev_Change_gNoOfStations(Sender: TObject);
-    procedure ev_Change_gOnlineStreams(Sender: TObject);
-    procedure ev_Change_gRandomizeTracks(Sender: TObject);
-    procedure ev_Change_Keys(Sender: TObject);
-    procedure ev_Change_mEnable(Sender: TObject);
-    procedure ev_Change_mLoudnessFactor(Sender: TObject);
-    procedure ev_Change_mName(Sender: TObject);
-    procedure ev_Change_rIsMP3(Sender: TObject);
-    procedure ev_Change_rLoudnessFactor(Sender: TObject);
-    procedure ev_Change_rName(Sender: TObject);
-    procedure ev_Change_rOrderMP3(Sender: TObject);
-    procedure ev_Change_rSlotCount(Sender: TObject);
-    procedure ev_Change_rSlotDampeningFactor(Sender: TObject);
-    procedure ev_Change_rSlotFileName(Sender: TObject);
-    procedure ev_Change_rSlotLoudnessFactor(Sender: TObject);
-    procedure ev_Change_rSlotOrderMP3(Sender: TObject);
-    procedure ev_Change_rSlotOwnerList(Sender: TObject);
-    procedure ev_Draw(Sender: TObject);
-    procedure ev_Free(Sender: TObject);
-    procedure ev_Init(Sender: TObject);
-    procedure ev_KeyPress(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ev_SelectFile(Sender: TObject);
-    procedure ev_SelectSlot(Sender: TObject);
-    procedure ev_SelectStation(Sender: TObject);
-    procedure ev_Update(Sender: TObject);
+    RseStationEditorSlotSelect: TListBox;
+    RvEnabled: TComboBox;
+    RvLoudnessFactor: TTrackBar;
+    RvName: TEdit;
+    RvSlotFileName: TEditButton;
+    RvSlotIsMP3: TComboBox;
+    RvSlotLoudnessFactor: TTrackBar;
+    RvSlotOrdered: TComboBox;
+    RvSlotOwnerList: TEditButton;
+    RvSlotRangeKm: TFloatSpinEdit;
+    RseStationEditorSlotPropertiesPnScroll: TScrollBox;
+    DlgSaveFile: TSaveDialog;
+    procedure ev_gpe_LinearVolume(Sender: TObject);
+    procedure ev_gpe_LoudnessFactor(Sender: TObject);
+    procedure ev_gpe_MaxLatency(Sender: TObject);
+    procedure ev_gpe_RandomTracks(Sender: TObject);
+    procedure ev_kbe_Modifier1(Sender: TObject);
+    procedure ev_kbe_Modifier2(Sender: TObject);
+    procedure ev_kbe_NextMP3(Sender: TObject);
+    procedure ev_kbe_NextStation(Sender: TObject);
+    procedure ev_kbe_PrevStation(Sender: TObject);
+    procedure ev_kbe_ReloadMod(Sender: TObject);
+    procedure ev_kbe_ReplayMP3(Sender: TObject);
+    procedure ev_MnuAbout(Sender: TObject);
+    procedure ev_MnuClose(Sender: TObject);
+    procedure ev_MnuConvertOld(Sender: TObject);
+    procedure ev_MnuExit(Sender: TObject);
+    procedure ev_MnuLoad(Sender: TObject);
+    procedure ev_MnuNew(Sender: TObject);
+    procedure ev_MnuSave(Sender: TObject);
+    procedure ev_MnuShowHelp(Sender: TObject);
+    procedure ev_rse_AddRadioSlot(Sender: TObject);
+    procedure ev_rse_AddRadioStation(Sender: TObject);
+    procedure ev_rse_DelRadioSlot(Sender: TObject);
+    procedure ev_rse_DelRadioStation(Sender: TObject);
+    procedure ev_rse_Enabled(Sender: TObject);
+    procedure ev_rse_LoudnessFactor(Sender: TObject);
+    procedure ev_rse_MoveRadioStation_Down(Sender: TObject);
+    procedure ev_rse_MoveRadioStation_Up(Sender: TObject);
+    procedure ev_rse_Name(Sender: TObject);
+    procedure ev_rse_SelectRadioStation(Sender: TObject; User: boolean);
+    procedure ev_rse_SelectRadioStationSlot(Sender: TObject; User: boolean);
+    procedure ev_rse_SlotFileName(Sender: TObject);
+    procedure ev_rse_SlotIsMP3(Sender: TObject);
+    procedure ev_rse_SlotLoudnessFactor(Sender: TObject);
+    procedure ev_rse_SlotOrdered(Sender: TObject);
+    procedure ev_rse_SlotOrderList(Sender: TObject);
+    procedure ev_rse_SlotOwnerList(Sender: TObject);
+    procedure ev_rse_SlotRangeKm(Sender: TObject);
+    procedure ev_WindowDestroy(Sender: TObject);
+    procedure ev_WindowInit(Sender: TObject);
+    procedure ev_WindowTryClose(Sender: TObject; var CanClose: Boolean);
   private
-    settings: TIniFile;
-    lastkey: word;
-    keys: array [1..7] of integer;
-    doUpdateIni: boolean;
-    procedure ShowWriteFailedError;
+    bLoadingSettings, bChangingRadioStation, bChangingRadioSlot: boolean;
+    settingsData: TJSONData;
   public
-    { public declarations }
+    procedure LoadSettings(data: TJSONData);
+    procedure CloseSettings;
   end;
 
 var
@@ -132,853 +147,724 @@ var
 
 implementation
 
-function ToUnicodeEx(wVirtKey, wScanCode: UINT; lpKeyState: PByte;  pwszBuff: PWideChar; cchBuff: Integer; wFlags: UINT; dwhkl: HKL): Integer; stdcall; external 'user32.dll';
-
-function StandardKeyToStringW(WindowHandle: HWND; VKey: DWORD): widestring;
-var
-  name: array [0..31] of widechar;
-  kbState: array [0..255] of byte;
-  idThread: DWORD;
-  code: LONG;
+function GetDampFactor(rangeKm: double): double;
 begin
-  ZeroMemory(@name[0], Length(name));
-  ZeroMemory(@kbState[0], Length(kbState));
-  idThread := GetWindowThreadProcessId(WindowHandle, nil);
-  code := MapVirtualKeyExW(VKey, 0, GetKeyboardLayout(idThread));
-  case VKey of
-       VK_LEFT,
-       VK_UP,
-       VK_RIGHT,
-       VK_DOWN,
-       VK_PRIOR,
-       VK_NEXT,
-       VK_END,
-       VK_HOME,
-       VK_INSERT,
-       VK_DELETE,
-       VK_DIVIDE,
-       VK_NUMLOCK:
-         code := code or $100; // set extended bit
-  end;
-  code := code shl 16;
-  ToUnicodeEx(VKey, code, kbState, name, 32, 0, GetKeyboardLayout(idThread));
-  Result := WideString(name);
-  if (Trim(Result) = '') then
-     begin
-       GetKeyNameTextW(code, name, 32);
-       Result := WideString(name);
-     end;
-  Result := UpCase(Result);
+  if (rangeKm >= 1000000.0) then
+     rangeKm := 1000000.0
+  else if (rangeKm < 0.01) then
+     rangeKm := 0.01;
+  Result := power(exp(1.0), Math.logn(exp(1.0), 0.5) / rangeKm);
+end;
+
+function GetRangeKm(dampFactor: double): double;
+begin
+  if (dampFactor > 0.999999999) then
+     dampFactor := 0.999999999
+  else if (dampFactor < 0.01) then
+     dampFactor := 0.01;
+  Result := logn(dampFactor, 0.5);
 end;
 
 {$R *.lfm}
 
 { TFrmEditor }
 
-procedure TFrmEditor.ShowWriteFailedError;
-begin
-  Application.MessageBox('Failed to write new value to file!', '', MB_OK + MB_ICONERROR);
-end;
-
-procedure TFrmEditor.ev_CanClose(Sender: TObject; var CanClose: boolean);
-begin
-  // Prevent closing the window, if we're waiting for a keypress
-  CanClose := PgEditorPages.Visible or BtSelectFile.Visible;
-end;
-
-procedure TFrmEditor.ev_Change_gLatency(Sender: TObject);
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       settings.WriteInteger('Global', 'Latency', GvLatency.Value);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_gLinearVolume(Sender: TObject);
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       if (GvLinearVolume.ItemIndex = 0) then
-          settings.WriteInteger('Global', 'UseLinearVolume', 0)
-       else
-          settings.WriteInteger('Global', 'UseLinearVolume', 1);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_gLoudnessFactor(Sender: TObject);
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       settings.WriteFloat('Global', 'LoudnessFactor', GvLoudnessFactor.Position / 100.0);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_gNoOfStations(Sender: TObject);
+procedure TFrmEditor.LoadSettings(data: TJSONData);
 var
-  stationcount, i, j, slotcount: integer;
-  section, key: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       stationcount := settings.ReadInteger('Global', 'NumberOfStations', 0);
-       settings.WriteInteger('Global', 'NumberOfStations', GvNoOfStations.Value);
-       if (GvNoOfStations.Value < stationcount) then
-          for i := GvNoOfStations.Value + 1 to stationcount do
-              begin
-                section := Format('Radio_%d', [i]);
-                slotcount := settings.ReadInteger(section, 'SlotCount', 0);
-                if (slotcount > 0) then
-                   begin
-                     for j := 1 to slotcount do
-                         begin
-                           key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [i, j]);
-                           if FileExists(key) then
-                              SysUtils.DeleteFile(key);
-                         end;
-                   end
-                else
-                   begin
-                     key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [i]);
-                     if FileExists(key) then
-                        SysUtils.DeleteFile(key);
-                   end;
-                if settings.SectionExists(section) then
-                   settings.EraseSection(section);
-              end;
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-       exit;
-     end;
-
-  // Update editor
-  RvSelectStation.Items.Clear;
-  if (GvNoOfStations.Value > 0) then
-     begin
-       for i := 1 to GvNoOfStations.Value do
-           RvSelectStation.Items.Add('Station %d', [i]);
-       RvSelectStation.ItemIndex := 0;
-     end
-  else
-     RvSelectStation.ItemIndex := -1;
-  GbrStationProps.Visible := RvSelectStation.ItemIndex >= 0;
-  RvSelectStation.Enabled := GvNoOfStations.Value > 0;
-  if Assigned(RvSelectStation.OnChange) then
-     RvSelectStation.OnChange(RvSelectStation);
-end;
-
-procedure TFrmEditor.ev_Change_gOnlineStreams(Sender: TObject);
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       if (GvOnlineStreams.ItemIndex = 0) then
-          settings.WriteInteger('Global', 'NoOnlineStreams', 1)
-       else
-          settings.WriteInteger('Global', 'NoOnlineStreams', 0);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_gRandomizeTracks(Sender: TObject);
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       if (GvRandomizeTracks.ItemIndex = 0) then
-          settings.WriteInteger('Global', 'RandomizeTracks', 0)
-       else
-          settings.WriteInteger('Global', 'RandomizeTracks', 1);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_Keys(Sender: TObject);
-var
-  index: integer;
-  prop: string;
+  arr: TJSONArray;
   i: integer;
 begin
-  PgEditorPages.Visible := false;
+  bLoadingSettings := true;
   try
-    index := 0;
-    if (Sender = BtkModifier1) then
-       begin
-         index := 1;
-         prop := 'Modifier_1';
-       end
-    else if (Sender = BtkModifier2) then
-       begin
-         index := 2;
-         prop := 'Modifier_2';
-       end
-    else if (Sender = BtkPrevStation) then
-       begin
-         index := 3;
-         prop := 'Func_PrevStation';
-       end
-    else if (Sender = BtkNextStation) then
-       begin
-         index := 4;
-         prop := 'Func_NextStation';
-       end
-    else if (Sender = BtkReplayMP3) then
-       begin
-         index := 5;
-         prop := 'Func_ReplayThisMP3';
-       end
-    else if (Sender = BtkSkipMP3) then
-       begin
-         index := 6;
-         prop := 'Func_SkipThisMP3';
-       end
-    else if (Sender = BtkReloadMod) then
-       begin
-         index := 7;
-         prop := 'Func_ReloadApp';
-       end;
-    if (index > 0) then
-       begin
-         while (lastkey = 0) and (lastkey <> VK_ESCAPE) do
-               begin
-                 Repaint;
-                 Application.ProcessMessages;
-               end;
-         if (lastkey <> VK_ESCAPE) then
-            begin
-              for i := Low(keys) to High(keys) do
-                  if (i <> index) and (lastkey <> 0) and (lastkey = keys[i]) then
-                     begin
-                       Application.MessageBox('Cannot use the same key twice!', '', MB_OK + MB_ICONERROR);
-                       exit;
-                     end;
-            end
-         else
-            lastkey := 0;
-         try
-           settings.WriteInteger('Keys', prop, lastkey);
-           keys[index] := lastkey;
-         except
-           ShowWriteFailedError;
+    CloseSettings;
+    try
+      if (data = nil) then
+         begin
+           Application.MessageBox('Failed to read the file!', '', MB_OK + MB_ICONERROR);
+           exit;
          end;
-       end;
+
+      settingsData := data;
+
+      // Mod properties
+      GvMaxLatency.Value := min(5000, max(10, GetIntegerSetting(settingsData, 'global.maxLatency', 500)));
+      if GetBooleanSetting(settingsData, 'global.randomizeTracks', true) then
+         GvRandomTracks.ItemIndex := 1
+      else
+         GvRandomTracks.ItemIndex := 0;
+      if GetBooleanSetting(settingsData, 'global.linearVolumeScale') then
+         GvLinearVolume.ItemIndex := 1
+      else
+         GvLinearVolume.ItemIndex := 0;
+      GvLoudnessFactor.Position := round(min(1.0, max(0.0, GetFloatSetting(settingsData, 'global.masterLoudness', 1.0))) * 100);
+
+      // Key bindings
+      arr := SetListSetting(settingsData, 'global.keyBindings');
+      while (arr.Count < 7) do
+            arr.Add(0);
+      KvModifier1.Text := GetKeyName(arr[0].AsInteger);
+      KvModifier2.Text := GetKeyName(arr[1].AsInteger);
+      KvPrevStation.Text :=GetKeyName(arr[2].AsInteger);
+      KvNextStation.Text := GetKeyName(arr[3].AsInteger);
+      KvReplayMP3.Text := GetKeyName(arr[4].AsInteger);
+      KvNextMP3.Text := GetKeyName(arr[5].AsInteger);
+      KvReloadMod.Text := GetKeyName(arr[6].AsInteger);
+
+      // Radio station editor
+      RseStationEditorSelect.ItemIndex := -1;
+      RseStationEditorSelect.Items.Clear;
+      arr := SetListSetting(settingsData, 'radioStations');
+      for i := 0 to arr.Count - 1 do
+          RseStationEditorSelect.Items.Add(GetStringSetting(arr[i], 'name', '???'));
+
+      // Update radio station editor
+      if Assigned(RseStationEditorSelect.OnSelectionChange) then
+         RseStationEditorSelect.OnSelectionChange(RseStationEditorSelect, true);
+
+      // GUI access
+      MnuFile_Save.Enabled := true;
+      MnuFile_Close.Enabled := true;
+      PgEditorPages.Visible := true;
+
+      // Info (if necessary)
+      if (GetStringSetting(settingsData, 'global._os_', JsonOperatingSystemString) <> JsonOperatingSystemString) then
+         Application.MessageBox('Your configuration file was made for a different operating system! Please check the key bindings and file paths before using this configuration file with the mod!', '', MB_OK + MB_ICONWARNING);
+    except
+      CloseSettings;
+      Application.MessageBox('Failed to load the file!', '', MB_OK + MB_ICONERROR);
+    end;
   finally
-    PgEditorPages.Visible := true;
-    ev_Update(Sender);
-    Repaint;
-    lastkey := 0;
+    bLoadingSettings := false;
   end;
 end;
 
-procedure TFrmEditor.ev_Change_mEnable(Sender: TObject);
+procedure TFrmEditor.CloseSettings;
 begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       if (MvEnable.ItemIndex = 0) then
-          settings.WriteInteger('Radio_MP3', 'Enabled', 0)
-       else
-          settings.WriteInteger('Radio_MP3', 'Enabled', 1);
-     except
-       ShowWriteFailedError;
-     end;
+  if (settingsData <> nil) then
+     settingsData.Free;
+  settingsData := nil;
+  MnuFile_Save.Enabled := false;
+  MnuFile_Close.Enabled := false;
+  PgEditorPages.Visible := false;
 end;
 
-procedure TFrmEditor.ev_Change_mLoudnessFactor(Sender: TObject);
+procedure TFrmEditor.ev_MnuExit(Sender: TObject);
 begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       settings.WriteFloat('Radio_MP3', 'LoudnessFactor', MvLoudnessFactor.Position / 100.0);
-     except
-       ShowWriteFailedError;
-     end;
+  Close;
 end;
 
-procedure TFrmEditor.ev_Change_mName(Sender: TObject);
+procedure TFrmEditor.ev_MnuLoad(Sender: TObject);
 begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       settings.WriteString('Radio_MP3', 'RadioText', MvName.Text);
-     except
-       ShowWriteFailedError;
-     end;
+  if not DlgOpenFile.Execute then
+     exit;
+  if (settingsData <> nil) and (Application.MessageBox('Are you sure you want to load another file? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDCANCEL) then
+     exit;
+  LoadSettings(u_jsonmanager.LoadSettings((DlgOpenFile.FileName)));
 end;
 
-procedure TFrmEditor.ev_Change_rIsMP3(Sender: TObject);
+procedure TFrmEditor.ev_MnuNew(Sender: TObject);
+begin
+  if (settingsData <> nil) and (Application.MessageBox('Are you sure you want to start from a blank template? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDCANCEL) then
+     exit;
+  CloseSettings;
+  LoadSettings(TJSONObject.Create);
+end;
+
+procedure TFrmEditor.ev_MnuSave(Sender: TObject);
+begin
+  if not DlgSaveFile.Execute then
+     exit;
+  SetStringSetting(settingsData, 'global._os_', JsonOperatingSystemString);
+  if not SaveSettings(settingsData, DlgSaveFile.FileName) then
+     Application.MessageBox('Failed to save the file!', '', MB_OK + MB_ICONERROR);
+end;
+
+procedure TFrmEditor.ev_MnuShowHelp(Sender: TObject);
+const
+  helpFileName: string = 'x4 ors editor help.pdf';
+begin
+  if not FileExists(helpFileName) then
+     Application.MessageBox('The help file couldn''t be found!', '', MB_OK + MB_ICONWARNING)
+  else if not OpenDocument(helpFileName) then
+     Application.MessageBox('The help file couldn''t be opened!', '', MB_OK + MB_ICONWARNING);
+end;
+
+procedure TFrmEditor.ev_rse_AddRadioSlot(Sender: TObject);
 var
-  section, key: string;
+  arr: TJSONArray;
+  rsData: TJSONData;
+  rs, slot: TJSONObject;
+  slotName: string;
 begin
-  PrSlotMP3OnlyProps.Enabled := RvSlotUseMP3.ItemIndex > 0;
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value > 0) then
-          key := Format('SlotIsMP3_%d', [RvSelectSlot.ItemIndex + 1])
-       else
-          key := 'IsMP3';
-       if (RvSlotUseMP3.ItemIndex = 0) then
-          settings.WriteInteger(section, key, 0)
-       else
-          settings.WriteInteger(section, key, 1);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-  if Assigned(RvSlotUseOrderMP3.OnChange) then
-     RvSlotUseOrderMP3.OnChange(RvSlotUseOrderMP3);
-end;
-
-procedure TFrmEditor.ev_Change_rLoudnessFactor(Sender: TObject);
-var
-  section: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value > 0) then
-          settings.WriteFloat(section, 'MasterLoudnessFactor', RvMasterLoudnessFactor.Position / 100.0)
-       else
-          settings.WriteFloat(section, 'LoudnessFactor', RvMasterLoudnessFactor.Position / 100.0);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rName(Sender: TObject);
-var
-  section: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       settings.WriteString(section, 'RadioText', RvName.Text);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rOrderMP3(Sender: TObject);
-var
-  section, key, key2: string;
-begin
-  RvSlotOrderMP3.Enabled := RvSlotUseOrderMP3.ItemIndex > 0;
-  if (RvSlotUseOrderMP3.ItemIndex < 1) or (RvSlotUseMP3.ItemIndex < 1) then
-     RvSlotOrderMP3.Lines.Clear;
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value > 0) then
-          begin
-            key := Format('SlotOrdered_%d', [RvSelectSlot.ItemIndex + 1]);
-            key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1]);
-          end
-       else
-          begin
-            key := 'Ordered';
-            key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
-          end;
-       if (RvSlotUseOrderMP3.ItemIndex < 1) or (RvSlotUseMP3.ItemIndex < 1) then
-          begin
-            settings.WriteInteger(section, key, 0);
-            if FileExists(key2) then
-               SysUtils.DeleteFile(key2);
-          end
-       else
-          settings.WriteInteger(section, key, 1);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rSlotCount(Sender: TObject);
-var
-  section, key, key2: string;
-  slotcount, i: integer;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       slotcount := settings.ReadInteger(section, 'SlotCount', 0);
-       settings.WriteInteger(section, 'SlotCount', RvSlotCount.Value);
-       if (RvSlotCount.Value = 0) and (slotcount > 0) then
-          begin
-            // Convert Slot 1 to default slot
-            settings.WriteFloat(section, 'LoudnessFactor', settings.ReadFloat(section, 'MasterLoudnessFactor', 0.0));
-            settings.DeleteKey(section, 'MasterLoudnessFactor');
-            settings.WriteString(section, 'FileName', settings.ReadString(section, 'SlotFileName_1', ''));
-            settings.DeleteKey(section, 'SlotFileName_1');
-            settings.WriteString(section, 'Owner', settings.ReadString(section, 'SlotOwner_1', ''));
-            settings.DeleteKey(section, 'SlotOwner_1');
-            settings.DeleteKey(section, 'SlotLoudnessFactor_1');
-            settings.WriteFloat(section, 'DampeningFactor', settings.ReadFloat(section, 'SlotDampeningFactor_1', 1.0));
-            settings.DeleteKey(section, 'SlotDampeningFactor_1');
-            settings.WriteFloat(section, 'IsMP3', settings.ReadFloat(section, 'SlotIsMP3_1', 1.0));
-            settings.DeleteKey(section, 'SlotIsMP3_1');
-            settings.WriteFloat(section, 'Ordered', settings.ReadFloat(section, 'SlotOrdered_1', 1.0));
-            settings.DeleteKey(section, 'SlotOrdered_1');
-            key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_1_order.lst', [RvSelectStation.ItemIndex + 1]);
-            if FileExists(key) then
-               begin
-                 key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
-                 RenameFile(key, key2);
-               end;
-          end
-       else if (RvSlotCount.Value > 0) and (slotcount = 0) then
-          begin
-            // Convert default slot to Slot 1
-            settings.WriteFloat(section, 'MasterLoudnessFactor', settings.ReadFloat(section, 'LoudnessFactor', 0.0));
-            settings.DeleteKey(section, 'LoudnessFactor');
-            settings.WriteString(section, 'SlotFileName_1', settings.ReadString(section, 'FileName', ''));
-            settings.DeleteKey(section, 'FileName');
-            settings.WriteString(section, 'SlotOwner_1', settings.ReadString(section, 'Owner', ''));
-            settings.DeleteKey(section, 'Owner');
-            settings.WriteFloat(section, 'SlotLoudnessFactor_1', 1.0);
-            settings.WriteFloat(section, 'SlotDampeningFactor_1', settings.ReadFloat(section, 'DampeningFactor', 1.0));
-            settings.WriteFloat(section, 'SlotIsMP3_1', settings.ReadFloat(section, 'IsMP3', 1.0));
-            settings.WriteFloat(section, 'SlotOrdered_1', settings.ReadFloat(section, 'Ordered', 1.0));
-            key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
-            if FileExists(key) then
-               begin
-                 key2 := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_1_order.lst', [RvSelectStation.ItemIndex + 1]);
-                 RenameFile(key, key2);
-               end;
-          end;
-       if (RvSlotCount.Value < slotcount) then
-          for i := RvSlotCount.Value + 1 to slotcount do
-              begin
-                key := Format('SlotFileName_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := Format('SlotOwner_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := Format('SlotLoudnessFactor_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := Format('SlotDampeningFactor_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := Format('SlotIsMP3_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := Format('SlotOrdered_%d', [i]);
-                settings.DeleteKey(section, key);
-                key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, i]);
-                if FileExists(key) then
-                   SysUtils.DeleteFile(key);
-              end;
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rsData := arr[RseStationEditorSelect.ItemIndex];
+  if (rsData.JSONType <> jtObject) then
+     begin
+       Application.MessageBox('Failed to add new track, the file may be corrupt!', '', MB_OK + MB_ICONERROR);
        exit;
      end;
-
-  // Update editor
-  RvSelectSlot.Items.Clear;
-  if (RvSlotCount.Value > 0) then
+  rs := TJSONObject(rsData);
+  arr := SetListSetting(rs, 'slots');
+  if (arr.Count >= 16)then
      begin
-       RvSelectSlot.Enabled := true;
-       for i := 1 to RvSlotCount.Value do
-         RvSelectSlot.Items.Add('Slot %d', [i]);
-     end
-  else
+       Application.MessageBox('Cannot add any more tracks to this radio station!', '', MB_OK + MB_ICONINFORMATION);
+       exit;
+     end;
+  slotName := Format('Track %d', [arr.Count + 1]);
+  slot := TJSONObject.Create;
+  arr.Add(slot);
+  RseStationEditorSlotSelect.Items.Add(slotName);
+
+  // Update slot editor
+  RseStationEditorSlotSelect.ItemIndex := RseStationEditorSlotSelect.Items.Count - 1;
+  if Assigned(RseStationEditorSlotSelect.OnSelectionChange) then
+     RseStationEditorSlotSelect.OnSelectionChange(RseStationEditorSlotSelect, true);
+end;
+
+procedure TFrmEditor.ev_rse_AddRadioStation(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs: TJSONObject;
+  rsName: string;
+begin
+  arr := SetListSetting(settingsData, 'radioStations');
+  if (arr.Count >= 32)then
      begin
-       RvSelectSlot.Items.Add('default');
-       RvSelectSlot.Enabled := false;
+       Application.MessageBox('Cannot add any more radio stations!', '', MB_OK + MB_ICONINFORMATION);
+       exit;
      end;
-  RvSelectSlot.ItemIndex := 0;
-  if Assigned(RvSelectSlot.OnChange) then
-     RvSelectSlot.OnChange(RvSelectSlot);
+  rsName := Format('Radio Station %d', [arr.Count + 1]);
+  rs := TJSONObject.Create;
+  rs.Strings['name'] := rsName;
+  arr.Add(rs);
+  RseStationEditorSelect.Items.Add(rsName);
+
+  // Update radio station editor
+  RseStationEditorSelect.ItemIndex := RseStationEditorSelect.Items.Count - 1;
+  if Assigned(RseStationEditorSelect.OnSelectionChange) then
+     RseStationEditorSelect.OnSelectionChange(RseStationEditorSelect, true);
 end;
 
-procedure TFrmEditor.ev_Change_rSlotDampeningFactor(Sender: TObject);
+procedure TFrmEditor.ev_rse_DelRadioSlot(Sender: TObject);
 var
-  section, key: string;
-  value: double;
+  arr: TJSONArray;
+  rsData: TJSONData;
+  rs: TJSONObject;
 begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value <= 0) then
-          key := 'DampeningFactor'
-       else
-          key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-       value := RvSlotEffectiveRange.Value;
-       if (value > 0.01) then
-           value := power(exp(1.0), Math.logn(exp(1.0), 0.5) / value);
-       settings.WriteFloat(section, key, value);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rSlotFileName(Sender: TObject);
-var
-  section, key: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value > 0) then
-          key := Format('SlotFileName_%d', [RvSelectSlot.ItemIndex + 1])
-       else
-          key := 'FileName';
-       settings.WriteString(section, key, RvSlotFileName.Text);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rSlotLoudnessFactor(Sender: TObject);
-var
-  section, key: string;
-begin
-  if doUpdateIni and Assigned(settings) and (RvSlotCount.Value > 0) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       key := Format('SlotLoudnessFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-       settings.WriteFloat(section, key, RvSlotLoudnessFactor.Position / 100.0);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rSlotOrderMP3(Sender: TObject);
-var
-  key: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       if (RvSlotCount.Value > 0) then
-          key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1])
-       else
-          key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
-       RvSlotOrderMP3.Lines.SaveToFile(key);
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Change_rSlotOwnerList(Sender: TObject);
-var
-  section, key: string;
-begin
-  if doUpdateIni and Assigned(settings) then
-     try
-       section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-       if (RvSlotCount.Value > 0) then
-          key := Format('SlotOwner_%d', [RvSelectSlot.ItemIndex + 1])
-       else
-          key := 'Owner';
-       settings.WriteString(section, key, RvSlotOwnerList.Text);
-       if settings.SectionExists('Radio_0') then
-          settings.EraseSection('Radio_0');
-     except
-       ShowWriteFailedError;
-     end;
-end;
-
-procedure TFrmEditor.ev_Draw(Sender: TObject);
-var
-  textStyle: TTextStyle;
-begin
-  // When waiting for keypress!
-  if (not PgEditorPages.Visible) and (not BtSelectFile.Visible) then
+  arr := GetListSetting(settingsData, 'radioStations');
+  rsData := arr[RseStationEditorSelect.ItemIndex];
+  if (rsData.JSONType <> jtObject) then
      begin
-       textStyle := Canvas.TextStyle;
-       textStyle.Alignment := taCenter;
-       textStyle.Layout := tlCenter;
-       textStyle.SingleLine := false;
-       textStyle.Wordbreak := true;
-       Canvas.Pen.Style := psClear;
-       Canvas.Brush.Style := bsSolid;
-       Canvas.Brush.Color := Canvas.Font.Color xor High(TColor);
-       Canvas.Rectangle(0, 0, Width, Height);
-       Canvas.TextRect(Classes.Rect(0, 0, Width, Height), 0, 0,
-                                        'Waiting for User Input'#13#10 +
-                                        'ESC = unbind function key'#13#10 +
-                                        'Any other key = bind to function',
-                                        textStyle);
+       Application.MessageBox('Failed to remove track, the file may be corrupt!', 'Add radio slot', MB_OK + MB_ICONERROR);
+       exit;
      end;
+  rs := TJSONObject(rsData);
+  arr := SetListSetting(rs, 'slots');
+  arr.Delete(RseStationEditorSlotSelect.ItemIndex);
+  RseStationEditorSlotSelect.Items.Delete(RseStationEditorSlotSelect.ItemIndex);
+
+  // Update slot editor
+  RseStationEditorSlotSelect.ItemIndex := -1;
+  if Assigned(RseStationEditorSlotSelect.OnSelectionChange) then
+     RseStationEditorSlotSelect.OnSelectionChange(RseStationEditorSlotSelect, true);
 end;
 
-procedure TFrmEditor.ev_Free(Sender: TObject);
-begin
-  if Assigned(settings) then
-     settings.Free;
-end;
-
-procedure TFrmEditor.ev_Init(Sender: TObject);
-begin
-  // Init
-  settings := nil;
-  lastkey := 0;
-  ZeroMemory(@keys[1], Length(keys) * sizeof(integer));
-  doUpdateIni := true;
-
-  // GUI setup
-  SetBounds(Left, Top, PgEditorPages.Width, PgEditorPages.Height);
-  PgEditorPages.Visible := false;
-  BtSelectFile.Left := (Width div 2) - (BtSelectFile.Width div 2);
-  BtSelectFile.Top := (Height div 2) - (BtSelectFile.Height div 2);
-  ev_Update(Sender);
-end;
-
-procedure TFrmEditor.ev_KeyPress(Sender: TObject; var Key: Word;
-  Shift: TShiftState);
-begin
-  // When waiting for keypress!
-  if (not PgEditorPages.Visible) and (not BtSelectFile.Visible) then
-     lastkey := Key;
-  Key := 0;
-end;
-
-procedure TFrmEditor.ev_SelectFile(Sender: TObject);
-begin
-  if DlgSelectFile.Execute then
-     begin
-       if Assigned(settings) then
-          settings.Free;
-       settings := TIniFile.Create(DlgSelectFile.FileName, [ifoFormatSettingsActive]);
-       settings.FormatSettings.DecimalSeparator := '.';
-       settings.CacheUpdates := false;
-       doUpdateIni := false; // Disallow file updates
-       try
-         // Global settings
-         GvNoOfStations.Value := settings.ReadInteger('Global', 'NumberOfStations', 0);
-         GvLatency.Value := settings.ReadInteger('Global', 'Latency', 1000);
-         if (settings.ReadInteger('Global', 'RandomizeTracks', 0) <> 0) then
-            GvRandomizeTracks.ItemIndex := 1
-         else
-            GvRandomizeTracks.ItemIndex := 0;
-         if (settings.ReadInteger('Global', 'NoOnlineStreams', 0) <> 0) then
-            GvOnlineStreams.ItemIndex := 0
-         else
-            GvOnlineStreams.ItemIndex := 1;
-         if (settings.ReadInteger('Global', 'UseLinearVolume', 0) <> 0) then
-            GvLinearVolume.ItemIndex := 1
-         else
-            GvLinearVolume.ItemIndex := 0;
-         GvLoudnessFactor.Position := round(settings.ReadFloat('Global', 'LoudnessFactor', 1.0) * 100);
-
-         // Key bindings
-         keys[1] := settings.ReadInteger('Keys', 'Modifier_1', 0);
-         keys[2] := settings.ReadInteger('Keys', 'Modifier_2', 0);
-         keys[3] := settings.ReadInteger('Keys', 'Func_PrevStation', 0);
-         keys[4] := settings.ReadInteger('Keys', 'Func_NextStation', 0);
-         keys[5] := settings.ReadInteger('Keys', 'Func_ReplayThisMP3', 0);
-         keys[6] := settings.ReadInteger('Keys', 'Func_SkipThisMP3', 0);
-         keys[7] := settings.ReadInteger('Keys', 'Func_ReloadApp', 0);
-
-         // MP3 player settings
-         if (settings.ReadInteger('Radio_MP3', 'Enabled', 0) <> 0) then
-            MvEnable.ItemIndex := 1
-         else
-            MvEnable.ItemIndex := 0;
-         MvLoudnessFactor.Position := round(settings.ReadFloat('Radio_MP3', 'LoudnessFactor', 0.0) * 100);
-         MvName.Text := settings.ReadString('Radio_MP3', 'RadioText', '?Unnamed MP3 Station?');
-
-         // Show the UI
-         BtSelectFile.Visible := false;
-         PgEditorPages.Visible := true;
-       except
-         // Error - set back to defaults
-         GvNoOfStations.Value := 0;
-         GvLatency.Value := 10;
-         GvRandomizeTracks.ItemIndex := 0;
-         GvOnlineStreams.ItemIndex := 1;
-         GvLinearVolume.ItemIndex := 0;
-         GvLoudnessFactor.Position := 100;
-         ZeroMemory(@keys[1], Length(keys) * sizeof(integer));
-         MvEnable.ItemIndex := 0;
-         MvLoudnessFactor.Position := 0;
-         MvName.Text := '?Unnamed MP3 Station?';
-         settings.Free;
-         settings := nil;
-       end;
-       if Assigned(GvNoOfStations.OnChange) then
-            GvNoOfStations.OnChange(GvNoOfStations);
-       doUpdateIni := true;
-       ev_Update(Sender);
-     end;
-end;
-
-procedure TFrmEditor.ev_SelectSlot(Sender: TObject);
+procedure TFrmEditor.ev_rse_DelRadioStation(Sender: TObject);
 var
-  locAllowUpdates: boolean;
-  section, key: string;
-  fvalue: double;
-  ivalue: integer;
+  arr: TJSONArray;
 begin
-  locAllowUpdates := doUpdateIni;
-  doUpdateIni := false;
-  PrSlotOnlyProps.Enabled := RvSlotCount.Value > 0;
-  section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-  if Assigned(settings) and settings.SectionExists(section) then
+  arr := GetListSetting(settingsData, 'radioStations');
+  arr.Delete(RseStationEditorSelect.ItemIndex);
+  RseStationEditorSelect.Items.Delete(RseStationEditorSelect.ItemIndex);
+
+  // Update radio station editor
+  RseStationEditorSelect.ItemIndex := -1;
+  if Assigned(RseStationEditorSelect.OnSelectionChange) then
+     RseStationEditorSelect.OnSelectionChange(RseStationEditorSelect, true);
+end;
+
+procedure TFrmEditor.ev_rse_Enabled(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations', RseStationEditorSelect.Items.Count);
+  TJSONObject(arr[RseStationEditorSelect.ItemIndex]).Booleans['enabled'] := RvEnabled.ItemIndex <> 0;
+end;
+
+procedure TFrmEditor.ev_rse_LoudnessFactor(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations', RseStationEditorSelect.Items.Count);
+  TJSONObject(arr[RseStationEditorSelect.ItemIndex]).Floats['masterLoudness'] := RvLoudnessFactor.Position / 100.0;
+end;
+
+procedure TFrmEditor.ev_rse_MoveRadioStation_Down(Sender: TObject);
+var
+  index, slotindex: integer;
+  arr: TJSONArray;
+begin
+  index := RseStationEditorSelect.ItemIndex;
+  if (index < (RseStationEditorSelect.Items.Count - 1)) then
      begin
-       try
-         if (RvSlotCount.Value > 0) then
-            key := Format('SlotFileName_%d', [RvSelectSlot.ItemIndex + 1])
-         else
-            key := 'FileName';
-         RvSlotFileName.Text := settings.ReadString(section, key, '');
-         if (RvSlotCount.Value > 0) then
-            key := Format('SlotOwner_%d', [RvSelectSlot.ItemIndex + 1])
-         else
-            key := 'Owner';
-         RvSlotOwnerList.Text := settings.ReadString(section, key, '');
-         if (RvSlotCount.Value > 0) then
+       arr := SetListSetting(settingsData, 'radioStations');
+       arr.Exchange(index, index + 1);
+       RseStationEditorSelect.Items.Exchange(index, index + 1);
+
+       // Update radio station editor
+       slotindex := RseStationEditorSlotSelect.ItemIndex;
+       RseStationEditorSelect.ItemIndex := index + 1;
+       if Assigned(RseStationEditorSelect.OnSelectionChange) then
+          RseStationEditorSelect.OnSelectionChange(RseStationEditorSelect, true);
+       if (slotindex >= 0) then
+          begin
+            RseStationEditorSlotSelect.ItemIndex := slotindex;
+            if Assigned(RseStationEditorSlotSelect.OnSelectionChange) then
+               RseStationEditorSlotSelect.OnSelectionChange(RseStationEditorSlotSelect, true);
+          end;
+     end;
+end;
+
+procedure TFrmEditor.ev_rse_MoveRadioStation_Up(Sender: TObject);
+var
+  index, slotindex: integer;
+  arr: TJSONArray;
+begin
+  index := RseStationEditorSelect.ItemIndex;
+  if (index > 0) then
+     begin
+       arr := SetListSetting(settingsData, 'radioStations');
+       arr.Exchange(index, index - 1);
+       RseStationEditorSelect.Items.Exchange(index, index - 1);
+
+       // Update radio station editor
+       slotindex := RseStationEditorSlotSelect.ItemIndex;
+       RseStationEditorSelect.ItemIndex := index - 1;
+       if Assigned(RseStationEditorSelect.OnSelectionChange) then
+          RseStationEditorSelect.OnSelectionChange(RseStationEditorSelect, true);
+       if (slotindex >= 0) then
+          begin
+            RseStationEditorSlotSelect.ItemIndex := slotindex;
+            if Assigned(RseStationEditorSlotSelect.OnSelectionChange) then
+               RseStationEditorSlotSelect.OnSelectionChange(RseStationEditorSlotSelect, true);
+          end;
+     end;
+end;
+
+procedure TFrmEditor.ev_rse_Name(Sender: TObject);
+var
+  arr: TJSONArray;
+  nameText: string;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  nameText := Trim(RvName.Text);
+  if (nameText = '') then
+     nameText := '???';
+  arr := SetListSetting(settingsData, 'radioStations', RseStationEditorSelect.Items.Count);
+  TJSONObject(arr[RseStationEditorSelect.ItemIndex]).Strings['name'] := nameText;
+  RseStationEditorSelect.Items[RseStationEditorSelect.ItemIndex] := nameText;
+end;
+
+procedure TFrmEditor.ev_rse_SelectRadioStation(Sender: TObject; User: boolean);
+var
+  arr: TJSONArray;
+  rs: TJSONObject;
+  i: integer;
+begin
+  bChangingRadioStation := true;
+  try
+    // Radio station editor
+    RseStationEditorPropertiesPn.Visible := (RseStationEditorSelect.ItemIndex >= 0) and (RseStationEditorSelect.Items.Count >= (RseStationEditorSelect.ItemIndex + 1));
+    RseDelStation.Enabled := RseStationEditorPropertiesPn.Visible;
+    RseMoveStationUp.Enabled := RseStationEditorPropertiesPn.Visible and (RseStationEditorSelect.Items.Count > 1) and (RseStationEditorSelect.ItemIndex > 0);
+    RseMoveStationDown.Enabled := RseStationEditorPropertiesPn.Visible and (RseStationEditorSelect.Items.Count > 1) and (RseStationEditorSelect.ItemIndex < (RseStationEditorSelect.Items.Count - 1));
+    if (RseStationEditorPropertiesPn.Visible) then
+       begin
+         arr := SetListSetting(settingsData, 'radioStations', RseStationEditorSelect.Items.Count);
+         rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+         if (rs.JSONType <> jtObject) then
             begin
-              key := Format('SlotLoudnessFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-              RvSlotLoudnessFactor.Position := round(settings.ReadFloat(section, key, 0.0) * 100);
-              key := Format('SlotDampeningFactor_%d', [RvSelectSlot.ItemIndex + 1]);
-              fvalue := settings.ReadFloat(section, key, 1.0);
-              if (fvalue < 0.01) then
-                 fvalue := 0.01
-              else if (fvalue > 0.99998) then
-                 fvalue := 0.99998;
-              RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
-              key := Format('SlotIsMP3_%d', [RvSelectSlot.ItemIndex + 1]);
-              ivalue := settings.ReadInteger(section, key, 0);
-              if (ivalue <= 0) then
-                 RvSlotUseMP3.ItemIndex := 0
+              Application.MessageBox('Failed to select radio station, the file may be corrupt!', '', MB_OK + MB_ICONERROR);
+              exit;
+            end;
+         RvLoudnessFactor.Position := round(min(1.0, max(0.0, GetFloatSetting(rs, 'masterLoudness', 1.0))) * 100);
+         RvName.Text := GetStringSetting(rs, 'name');
+         if GetBooleanSetting(rs, 'enabled', true) then
+            RvEnabled.ItemIndex := 1
+         else
+            RvEnabled.ItemIndex := 0;
+
+         // Slot editor
+         RseStationEditorSlotSelect.ItemIndex := -1;
+         RseStationEditorSlotSelect.Items.Clear;
+         arr := GetListSetting(rs, 'slots');
+         if (arr <> nil) then
+            for i := 0 to arr.Count - 1 do
+                RseStationEditorSlotSelect.Items.Add('Track %d', [i + 1]);
+       end;
+
+    // Update slot editor
+    if Assigned(RseStationEditorSlotSelect.OnSelectionChange) then
+       RseStationEditorSlotSelect.OnSelectionChange(RseStationEditorSlotSelect, true);
+  finally
+    bChangingRadioStation := false;
+  end;
+end;
+
+procedure TFrmEditor.ev_rse_SelectRadioStationSlot(Sender: TObject; User: boolean);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+  i: integer;
+begin
+  bChangingRadioSlot := true;
+  try
+    // Slot editor
+    RseStationEditorSlotPropertiesPn.Visible := RseStationEditorPropertiesPn.Visible and (RseStationEditorSlotSelect.ItemIndex >= 0) and (RseStationEditorSlotSelect.Items.Count >= (RseStationEditorSlotSelect.ItemIndex + 1));
+    RseDelSlot.Enabled := RseStationEditorSlotPropertiesPn.Visible;
+    if RseStationEditorSlotPropertiesPn.Visible then
+       begin
+         arr := SetListSetting(settingsData, 'radioStations', RseStationEditorSelect.Items.Count);
+         rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+         if (rs.JSONType <> jtObject) then
+            begin
+              Application.MessageBox('Failed to select track, the file may be corrupt!', '', MB_OK + MB_ICONERROR);
+              exit;
+            end;
+         arr := SetListSetting(rs, 'slots');
+         slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+         RvSlotLoudnessFactor.Position := round(GetFloatSetting(slot, 'loudness') * 100);
+         RvSlotRangeKm.Value := GetRangeKm(GetFloatSetting(slot, 'dampFactor', 0.0));
+         RvSlotOwnerList.Text := GetStringSetting(slot, 'owners');
+         if GetBooleanSetting(slot, 'isMP3Player') then
+            begin
+              if GetBooleanSetting(slot, 'disableUserInteraction') then
+                 RvSlotIsMP3.ItemIndex := 2
               else
-                 RvSlotUseMP3.ItemIndex := 1;
-              key := Format('SlotOrdered_%d', [RvSelectSlot.ItemIndex + 1]);
-              ivalue := settings.ReadInteger(section, key, 0);
-              if (ivalue <= 0) or (RvSlotUseMP3.ItemIndex < 1) then
-                 RvSlotUseOrderMP3.ItemIndex := 0
-              else
-                 RvSlotUseOrderMP3.ItemIndex := 1;
-              RvSlotOrderMP3.Lines.Clear;
-              if (RvSlotUseMP3.ItemIndex > 0) and (RvSlotUseOrderMP3.ItemIndex > 0) then
-                 begin
-                   key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_slot_%d_order.lst', [RvSelectStation.ItemIndex + 1, RvSelectSlot.ItemIndex + 1]);
-                   RvSlotOrderMP3.Lines.LoadFromFile(key);
-                 end;
+                 RvSlotIsMP3.ItemIndex := 1;
             end
          else
-            begin
-              RvSlotLoudnessFactor.Position := 0;
-              key := 'DampeningFactor';
-              fvalue := settings.ReadFloat(section, key, 1.0);
-              if (fvalue < 0.01) then
-                 fvalue := 0.01
-              else if (fvalue > 0.99998) then
-                 fvalue := 0.99998;
-              RvSlotEffectiveRange.Value := logn(fvalue, 0.5);
-              key := 'IsMP3';
-              ivalue := settings.ReadInteger(section, key, 0);
-              if (ivalue <= 0) then
-                 RvSlotUseMP3.ItemIndex := 0
-              else
-                 RvSlotUseMP3.ItemIndex := 1;
-              key := 'Ordered';
-              ivalue := settings.ReadInteger(section, key, 0);
-              if (ivalue <= 0) or (RvSlotUseMP3.ItemIndex < 1) then
-                 RvSlotUseOrderMP3.ItemIndex := 0
-              else
-                 RvSlotUseOrderMP3.ItemIndex := 1;
-              RvSlotOrderMP3.Lines.Clear;
-              if (RvSlotUseMP3.ItemIndex > 0) and (RvSlotUseOrderMP3.ItemIndex > 0) then
-                 begin
-                   key := IncludeTrailingPathDelimiter(ExtractFilePath(settings.FileName)) + Format('radio_%d_order.lst', [RvSelectStation.ItemIndex + 1]);
-                   RvSlotOrderMP3.Lines.LoadFromFile(key);
-                 end;
-            end;
-         if settings.SectionExists('Radio_0') then
-            settings.EraseSection('Radio_0');
-       except
-         RvSlotFileName.Text := '';
-         RvSlotOwnerList.Text := '';
-         RvSlotLoudnessFactor.Position := 0;
-         RvSlotEffectiveRange.Value := RvSlotEffectiveRange.MaxValue;
-         RvSlotUseMP3.ItemIndex := 0;
-         RvSlotUseOrderMP3.ItemIndex := 0;
-         RvSlotOrderMP3.Lines.Clear;
-       end;
-     end;
-  if Assigned(RvSlotUseMP3.OnChange) then
-     RvSlotUseMP3.OnChange(RvSlotUseMP3);
-  if locAllowUpdates then
-     doUpdateIni := true;
-end;
-
-procedure TFrmEditor.ev_SelectStation(Sender: TObject);
-var
-  locAllowUpdates: boolean;
-  section: string;
-begin
-  locAllowUpdates := doUpdateIni;
-  doUpdateIni := false;
-  section := Format('Radio_%d', [RvSelectStation.ItemIndex + 1]);
-  if Assigned(settings) and settings.SectionExists(section) then
-     begin
-       try
-         RvSlotCount.Value := settings.ReadInteger(section, 'SlotCount', 0);
-         if (RvSlotCount.Value > 0) then
-            RvMasterLoudnessFactor.Position := round(settings.ReadFloat(section, 'MasterLoudnessFactor', 0.0) * 100)
+            RvSlotIsMP3.ItemIndex := 0;
+         RvSlotFileName.Text := GetStringSetting(slot, 'url');
+         if GetBooleanSetting(slot, 'isOrdered') then
+            RvSlotOrdered.ItemIndex := 1
          else
-            RvMasterLoudnessFactor.Position := round(settings.ReadFloat(section, 'LoudnessFactor', 0.0) * 100);
-         RvName.Text := settings.ReadString(section, 'RadioText', '?Unnamed Station?');
-         if settings.SectionExists('Radio_0') then
-            settings.EraseSection('Radio_0');
-       except
-         RvSlotCount.Value := 0;
-         RvMasterLoudnessFactor.Position := 0;
-         RvName.Text := '?Unnamed Station?';
+            RvSlotOrdered.ItemIndex := 0;
+         RvSlotOrderList.Lines.Clear;
+         arr := GetListSetting(slot, 'orderByList');
+         if (arr <> nil) then
+            for i := 0 to arr.Count - 1 do
+                RvSlotOrderList.Lines.Add(GetStringSetting(arr[i], ''));
        end;
-     end
-  else if Assigned(settings) then
-     begin
-       try
-         settings.WriteInteger(section, 'SlotCount', 0);
-         RvSlotCount.Value := 0;
-         settings.WriteFloat(section, 'LoudnessFactor', 0.0);
-         RvMasterLoudnessFactor.Position := 0;
-         settings.WriteString(section, 'RadioText', '?Unnamed Station?');
-         RvName.Text := '?Unnamed Station?';
-         if settings.SectionExists('Radio_0') then
-            settings.EraseSection('Radio_0');
-       except
-         RvSlotCount.Value := 0;
-         RvMasterLoudnessFactor.Position := 0;
-         RvName.Text := '?Unnamed Station?';
-       end;
-     end;
-  if Assigned(RvSlotCount.OnChange) then
-     RvSlotCount.OnChange(RvSlotCount);
-  if locAllowUpdates then
-     doUpdateIni := true;
+  finally
+    bChangingRadioSlot := false;
+  end;
 end;
 
-procedure TFrmEditor.ev_Update(Sender: TObject);
+procedure TFrmEditor.ev_rse_SlotFileName(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
 begin
-  if PgEditorPages.Visible and (PgEditorPages.TabIndex = 1) then
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  FrmFileChooser.FileName := GetStringSetting(slot, 'url');
+  if (FrmFileChooser.ShowModal = mrOK) then
      begin
-       LbkvModifier1.Caption := StandardKeyToStringW(Handle, keys[1]);
-       LbkvModifier2.Caption := StandardKeyToStringW(Handle, keys[2]);
-       LbkvPrevStation.Caption := StandardKeyToStringW(Handle, keys[3]);
-       LbkvNextStation.Caption := StandardKeyToStringW(Handle, keys[4]);
-       LbkvReplayMP3.Caption := StandardKeyToStringW(Handle, keys[5]);
-       LbkvSkipMP3.Caption := StandardKeyToStringW(Handle, keys[6]);
-       LbkvReloadMod.Caption := StandardKeyToStringW(Handle, keys[7]);
+       slot.Strings['url'] := FrmFileChooser.FileName;
+       RvSlotFileName.Text := FrmFileChooser.FileName;
      end;
+end;
+
+procedure TFrmEditor.ev_rse_SlotIsMP3(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  slot.Booleans['isMP3Player'] := RvSlotIsMP3.ItemIndex <> 0;
+  slot.Booleans['disableUserInteraction'] := RvSlotIsMP3.ItemIndex = 2;
+end;
+
+procedure TFrmEditor.ev_rse_SlotLoudnessFactor(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  slot.Floats['loudness'] := RvSlotLoudnessFactor.Position / 100.0;
+end;
+
+procedure TFrmEditor.ev_rse_SlotOrdered(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  slot.Booleans['isOrdered'] := RvSlotOrdered.ItemIndex <> 0;
+end;
+
+procedure TFrmEditor.ev_rse_SlotOrderList(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+  i: integer;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  arr := TJSONArray.Create;
+  slot.Arrays['orderByList'] := arr;
+  for i := 0 to RvSlotOrderList.Lines.Count - 1 do
+      arr.Add(RvSlotOrderList.Lines[i]);
+end;
+
+procedure TFrmEditor.ev_rse_SlotOwnerList(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+begin
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  FrmStringEditor.EditText := GetStringSetting(slot, 'owners');
+  if (FrmStringEditor.ShowModal = mrOK) then
+     begin
+       slot.Strings['owners'] := FrmStringEditor.EditText;
+       RvSlotOwnerList.Text := FrmStringEditor.EditText;
+     end;
+end;
+
+procedure TFrmEditor.ev_rse_SlotRangeKm(Sender: TObject);
+var
+  arr: TJSONArray;
+  rs, slot: TJSONObject;
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  arr := SetListSetting(settingsData, 'radioStations');
+  rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
+  arr := GetListSetting(rs, 'slots');
+  slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
+  slot.Floats['dampFactor'] := GetDampFactor(RvSlotRangeKm.Value);
+end;
+
+procedure TFrmEditor.ev_MnuClose(Sender: TObject);
+begin
+  if (settingsData <> nil) and (Application.MessageBox('Are you sure you want to close your current session? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDCANCEL) then
+     exit;
+  CloseSettings;
+end;
+
+procedure TFrmEditor.ev_MnuConvertOld(Sender: TObject);
+begin
+  Application.MessageBox('This utility allows you to load your old X4 ORS configuration into this application. You can then save the configuration in the new file format.',  '', MB_OK + MB_ICONINFORMATION);
+  if not DlgOpenFileOld.Execute then
+     exit;
+  if (settingsData <> nil) and (Application.MessageBox('Are you sure you want to load another file? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDCANCEL) then
+     exit;
+  LoadSettings(ConvertOldSettings(DlgOpenFileOld.FileName));
+end;
+
+procedure TFrmEditor.ev_MnuAbout(Sender: TObject);
+begin
+  Application.MessageBox('This application allows you to edit the X4 ORS configuration file, without requiring manual editions, or knowledge about the file format itself.', '', MB_OK + MB_ICONINFORMATION);
+end;
+
+procedure TFrmEditor.ev_gpe_MaxLatency(Sender: TObject);
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  SetIntegerSetting(settingsData, 'global.maxLatency', GvMaxLatency.Value);
+end;
+
+procedure TFrmEditor.ev_gpe_LinearVolume(Sender: TObject);
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  SetBooleanSetting(settingsData, 'global.linearVolumeScale', GvLinearVolume.ItemIndex <> 0);
+end;
+
+procedure TFrmEditor.ev_gpe_LoudnessFactor(Sender: TObject);
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  SetFloatSetting(settingsData, 'global.masterLoudness', GvLoudnessFactor.Position / 100.0);
+end;
+
+procedure TFrmEditor.ev_gpe_RandomTracks(Sender: TObject);
+begin
+  if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
+     exit;
+  SetBooleanSetting(settingsData, 'global.randomizeTracks', GvRandomTracks.ItemIndex <> 0);
+end;
+
+procedure TFrmEditor.ev_kbe_Modifier1(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 1) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[0], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 1);
+       arr.Integers[0] := FrmKeyEditor.KeyCode;
+       KvModifier1.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_Modifier2(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 2) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[1], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 2);
+       arr.Integers[1] := FrmKeyEditor.KeyCode;
+       KvModifier2.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_NextMP3(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 6) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[5], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 6);
+       arr.Integers[5] := FrmKeyEditor.KeyCode;
+       KvNextMP3.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_NextStation(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 4) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[3], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 4);
+       arr.Integers[3] := FrmKeyEditor.KeyCode;
+       KvNextStation.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_PrevStation(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 3) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[2], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 3);
+       arr.Integers[2] := FrmKeyEditor.KeyCode;
+       KvPrevStation.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_ReloadMod(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 7) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[6], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 7);
+       arr.Integers[6] := FrmKeyEditor.KeyCode;
+       KvReloadMod.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_kbe_ReplayMP3(Sender: TObject);
+var
+  arr: TJSONArray;
+begin
+  arr := GetListSetting(settingsData, 'global.keyBindings');
+  if (arr <> nil) and (arr.Count >= 5) then
+     FrmKeyEditor.KeyCode := GetIntegerSetting(arr[4], '')
+  else
+     FrmKeyEditor.KeyCode := 0;
+  if (FrmKeyEditor.ShowModal = mrOK) then
+     begin
+       arr := SetListSetting(settingsData, 'global.keyBindings', 5);
+       arr.Integers[4] := FrmKeyEditor.KeyCode;
+       KvReplayMP3.Text := GetKeyName(FrmKeyEditor.KeyCode);
+     end;
+end;
+
+procedure TFrmEditor.ev_WindowDestroy(Sender: TObject);
+begin
+  CloseSettings;
+end;
+
+procedure TFrmEditor.ev_WindowInit(Sender: TObject);
+begin
+  bLoadingSettings := false;
+  bChangingRadioStation := false;
+  bChangingRadioSlot := false;
+  settingsData := nil;
+  CloseSettings;
+  DlgOpenFile.InitialDir := GetUserDir;
+  DlgSaveFile.InitialDir := GetUserDir;
+  UpdateForm(self);
+end;
+
+procedure TFrmEditor.ev_WindowTryClose(Sender: TObject; var CanClose: Boolean);
+begin
+  if (settingsData <> nil) then
+     CanClose := Application.MessageBox('Are you sure you want to quit? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDOK;
 end;
 
 end.

@@ -4,17 +4,24 @@
     <PathDelim Value="\"/>
     <Version Value="12"/>
     <ManyBuildModesSelection Value="Win64"/>
-    <BuildModes Active="Win64"/>
-    <Units Count="1">
+    <BuildModes Active="Linux64"/>
+    <Units Count="2">
       <Unit0>
         <Filename Value="X4_ORS.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="43"/>
         <Loaded Value="True"/>
       </Unit0>
+      <Unit1>
+        <Filename Value="lua.pas"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="14"/>
+        <Loaded Value="True"/>
+      </Unit1>
     </Units>
     <JumpHistory HistoryIndex="-1"/>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes ActiveMode="default"/>

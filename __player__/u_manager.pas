@@ -15,7 +15,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure AddRadioStation(station: TRadioStation; isDedicatedMP3: boolean = false);
+    procedure AddRadioStation(station: TRadioStation);
     procedure Process(currentStationIndex: integer; currentVolume: double; factionData: PFactionDistanceDataArray; bUseLinearVol: boolean; playbackStatus: TRadioStatus; currentTime: qword);
     procedure SetRandomPos(maxrandompos: double);
     procedure SkipNextTrack;
@@ -39,20 +39,16 @@ var
   i: integer;
 begin
   for i := 0 to _stations.Count - 1 do
-      _stations[i].RadioStation.Free;
+      _stations[i].Free;
   _stations.Free;
   inherited;
 end;
 
-procedure TRadioStationManager.AddRadioStation(station: TRadioStation; isDedicatedMP3: boolean = false);
-var
-  info: TRadioStationInfo;
+procedure TRadioStationManager.AddRadioStation(station: TRadioStation);
 begin
-  info.RadioStation := station;
-  info.IsDedicatedMP3Player := isDedicatedMP3;
-  if (_stations.IndexOf(info) < 0) then
+  if (_stations.IndexOf(station) < 0) then
      begin
-       _stations.Add(info);
+       _stations.Add(station);
        Process(-1, 0.0, nil, false, rsPaused, 0);
      end;
 end;
@@ -75,9 +71,9 @@ begin
   for i := 0 to _stations.Count - 1 do
       begin
         if (_rsindex <> i) then
-           _stations[i].RadioStation.Process(nil, 0.0, playbackStatus, currentTime, false)
+           _stations[i].Process(nil, 0.0, playbackStatus, currentTime, false)
         else
-          _stations[i].RadioStation.Process(factionData, locvol, playbackStatus, currentTime, true);
+          _stations[i].Process(factionData, locvol, playbackStatus, currentTime, true);
       end;
 end;
 
@@ -86,25 +82,25 @@ var
   i: integer;
 begin
   for i := 0 to _stations.Count - 1 do
-      _stations[i].RadioStation.SetRandomPos(maxrandompos);
+      _stations[i].SetRandomPos(maxrandompos);
 end;
 
 procedure TRadioStationManager.SkipNextTrack;
 begin
-  if (_rsindex > -1) and _stations[_rsindex].IsDedicatedMP3Player then
-     _stations[_rsindex].RadioStation.SkipNextTrack;
+  if (_rsindex > -1) then
+     _stations[_rsindex].SkipNextTrack;
 end;
 
 procedure TRadioStationManager.SkipPrevTrack;
 begin
-  if (_rsindex > -1) and _stations[_rsindex].IsDedicatedMP3Player then
-     _stations[_rsindex].RadioStation.SkipPrevTrack;
+  if (_rsindex > -1) then
+     _stations[_rsindex].SkipPrevTrack;
 end;
 
 procedure TRadioStationManager.ReplayCurrTrack;
 begin
-  if (_rsindex > -1) and _stations[_rsindex].IsDedicatedMP3Player then
-     _stations[_rsindex].RadioStation.ReplayCurrTrack;
+  if (_rsindex > -1) then
+     _stations[_rsindex].ReplayCurrTrack;
 end;
 
 function TRadioStationManager.GetNameList: TStringArray;
@@ -113,7 +109,7 @@ var
 begin
   SetLength(Result, _stations.Count);
   for i := 0 to _stations.Count - 1 do
-      Result[i] := _stations[i].RadioStation.RadioStationName;
+      Result[i] := _stations[i].RadioStationName;
 end;
 
 procedure TRadioStationManager.WriteReport(fileName: string);
@@ -127,7 +123,7 @@ begin
     for i := 0 to _stations.Count - 1 do
         begin
           report.Add('Radio station %d:', [i + 1]);
-          _stations[i].RadioStation.GenerateReport(report, 1);
+          _stations[i].GenerateReport(report, 1);
           report.Add('');
         end;
     System.Assign(log, fileName);

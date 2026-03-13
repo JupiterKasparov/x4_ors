@@ -3,31 +3,92 @@
   <ProjectSession>
     <PathDelim Value="\"/>
     <Version Value="12"/>
-    <BuildModes Active="Default"/>
-    <Units Count="2">
-      <Unit0>
+    <BuildModes Active="Windows64"/>
+    <Units>
+      <Unit>
         <Filename Value="x4_ors_editor.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <UsageCount Value="38"/>
-      </Unit0>
-      <Unit1>
+        <EditorIndex Value="5"/>
+        <CursorPos Y="31"/>
+        <UsageCount Value="114"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
         <Filename Value="editor.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FrmEditor"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <UsageCount Value="38"/>
+        <UsageCount Value="114"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
-      </Unit1>
+      </Unit>
+      <Unit>
+        <Filename Value="u_filechooser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FrmFileChooser"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="7"/>
+        <UsageCount Value="101"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_texteditor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FrmStringEditor"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="6"/>
+        <UsageCount Value="99"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_keyeditor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FrmKeyEditor"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="97"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_jsonmanager.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="71"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_oldconvert.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="62"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_osutils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="u_keys.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="99"/>
+        <UsageCount Value="85"/>
+      </Unit>
     </Units>
-    <JumpHistory HistoryIndex="-1" />
+    <JumpHistory HistoryIndex="-1"/>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes ActiveMode="default"/>
+      <Modes ActiveMode=""/>
     </RunParams>
   </ProjectSession>
 </CONFIG>

@@ -7,9 +7,7 @@ interface
 uses
   Classes, SysUtils, syncobjs, u_utils;
 
-var
-  NoLog: boolean = false;
-
+procedure SetAppLogFile(fn: string);
 procedure Log(category, msg: string);
 procedure LogError(msg: string);
 procedure LogError(xcpt: TObject; addr: Pointer);
@@ -17,18 +15,23 @@ procedure LogError(xcpt: TObject; addr: Pointer);
 implementation
 
 const
-  logname: string = 'x4_ors.log';
+  logname: string = '';
 
 var
   logActive: boolean;
   logCriticalSection: TCriticalSection;
+
+procedure SetAppLogFile(fn: string);
+begin
+  logname := fn;
+end;
 
 procedure Log(category, msg: string);
 var
   time: TDateTime;
   log: System.Text;
 begin
-  if (not NoLog) and Assigned(logCriticalSection) then
+  if (logname <> '') and Assigned(logCriticalSection) then
      begin
        logCriticalSection.Acquire;
        try

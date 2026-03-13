@@ -44,8 +44,8 @@ interface
 
 const
 {$IFDEF UNIX}
-  LUA_NAME = 'liblua5.1.so';
-  LUA_LIB_NAME = 'liblua5.1.so';
+  LUA_NAME = 'libluajit-5.1.so.2';
+  LUA_LIB_NAME = 'libluajit-5.1.so.2';
 {$ELSE}
   LUA_NAME = 'lua51_64.dll';
   LUA_LIB_NAME = 'lua51_64.dll';

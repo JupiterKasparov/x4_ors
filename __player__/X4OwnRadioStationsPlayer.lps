@@ -4,57 +4,59 @@
     <PathDelim Value="\"/>
     <Version Value="12"/>
     <ManyBuildModesSelection Value="Win64"/>
-    <BuildModes Active="Win64"/>
-    <Units Count="6">
+    <BuildModes Active="Linux64"/>
+    <Units Count="7">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <UsageCount Value="40"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="u_manager.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
-        <UsageCount Value="40"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="u_radio.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
-        <UsageCount Value="40"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="u_song.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <UsageCount Value="40"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="u_logger.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <UsageCount Value="40"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="u_utils.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
-        <UsageCount Value="40"/>
+        <EditorIndex Value="6"/>
+        <UsageCount Value="51"/>
         <Loaded Value="True"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="u_jsonmanager.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="31"/>
+        <Loaded Value="True"/>
+      </Unit6>
     </Units>
-    <JumpHistory Count="1">
-      <Position1>
-        <Filename Value="u_radio.pas"/>
-        <Caret Line="76" Column="20" TopLine="52"/>
-      </Position1>
-    </JumpHistory>
+    <JumpHistory HistoryIndex="1-"/>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes ActiveMode="default"/>

@@ -1,0 +1,44 @@
+object FrmStringEditor: TFrmStringEditor
+  Left = 1090
+  Height = 240
+  Top = 390
+  Width = 320
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsToolWindow
+  Caption = 'Text editor'
+  ClientHeight = 240
+  ClientWidth = 320
+  DefaultMonitor = dmMainForm
+  Position = poMainFormCenter
+  ShowInTaskBar = stNever
+  LCLVersion = '4.2.0.0'
+  OnCreate = ev_InitWindow
+  object TeCancel: TButton
+    Left = 168
+    Height = 25
+    Top = 192
+    Width = 112
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 0
+  end
+  object TeOK: TButton
+    Left = 48
+    Height = 25
+    Top = 192
+    Width = 112
+    Caption = 'OK'
+    ModalResult = 1
+    TabOrder = 1
+  end
+  object TvTextEditor: TMemo
+    Left = 0
+    Height = 178
+    Top = 0
+    Width = 320
+    MaxLength = 65536
+    ScrollBars = ssAutoBoth
+    TabOrder = 2
+    WordWrap = False
+  end
+end

@@ -81,12 +81,18 @@ begin
 
            // Already stopped
            else
-              BASS_StreamFree(bassStreamHandle);
+              begin
+                BASS_StreamFree(bassStreamHandle);
+                bassStreamHandle := 0;
+              end;
          end
 
       // Track has already gone
       else if (bassStreamHandle <> 0) then
-         BASS_StreamFree(bassStreamHandle);
+         begin
+           BASS_StreamFree(bassStreamHandle);
+           bassStreamHandle := 0;
+         end;
     finally
       OnlineLoadingList.UnlockList;
     end;
@@ -314,50 +320,10 @@ end;
 
 function TPlayableAudioTrack.GetErrorInfo: string;
 begin
-  case _errno of
-       0: Result := ''; // BASS_OK: we return empty string here, to signal, that there's no error
-       1: Result := 'BASS_ERROR_MEM';
-       2: Result := 'BASS_ERROR_FILEOPEN';
-       3: Result := 'BASS_ERROR_DRIVER';
-       4: Result := 'BASS_ERROR_BUFLOST';
-       5: Result := 'BASS_ERROR_HANDLE';
-       6: Result := 'BASS_ERROR_FORMAT';
-       7: Result := 'BASS_ERROR_POSITION';
-       8: Result := 'BASS_ERROR_INIT';
-       9: Result := 'BASS_ERROR_START';
-       10: Result := 'BASS_ERROR_SSL';
-       11: Result := 'BASS_ERROR_REINIT';
-       14: Result := 'BASS_ERROR_ALREADY';
-       17: Result := 'BASS_ERROR_NOTAUDIO';
-       18: Result := 'BASS_ERROR_NOCHAN';
-       19: Result := 'BASS_ERROR_ILLTYPE';
-       20: Result := 'BASS_ERROR_ILLPARAM';
-       21: Result := 'BASS_ERROR_NO3D';
-       22: Result := 'BASS_ERROR_NOEAX';
-       23: Result := 'BASS_ERROR_DEVICE';
-       24: Result := 'BASS_ERROR_NOPLAY';
-       25: Result := 'BASS_ERROR_FREQ';
-       27: Result := 'BASS_ERROR_NOTFILE';
-       29: Result := 'BASS_ERROR_NOHW';
-       31: Result := 'BASS_ERROR_EMPTY';
-       32: Result := 'BASS_ERROR_NONET';
-       33: Result := 'BASS_ERROR_CREATE';
-       34: Result := 'BASS_ERROR_NOFX';
-       37: Result := 'BASS_ERROR_NOTAVAIL';
-       38: Result := 'BASS_ERROR_DECODE';
-       39: Result := 'BASS_ERROR_DX';
-       40: Result := 'BASS_ERROR_TIMEOUT';
-       41: Result := 'BASS_ERROR_FILEFORM';
-       42: Result := 'BASS_ERROR_SPEAKER';
-       43: Result := 'BASS_ERROR_VERSION';
-       44: Result := 'BASS_ERROR_CODEC';
-       45: Result := 'BASS_ERROR_ENDED';
-       46: Result := 'BASS_ERROR_BUSY';
-       47: Result := 'BASS_ERROR_UNSTREAMABLE';
-       48: Result := 'BASS_ERROR_PROTOCOL';
-       49: Result := 'BASS_ERROR_DENIED';
-       else Result := Format('BASS Error %d', [_errno]);
-  end;
+  if (_errno = 0) then
+     exit('')
+  else
+     exit(Format('BASS Error %d', [_errno]));
 end;
 
 initialization
