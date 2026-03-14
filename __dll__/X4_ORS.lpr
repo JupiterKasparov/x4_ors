@@ -73,11 +73,14 @@ end;
 procedure Sleep(ms: cint);
 var
   req, rem: TimeSpec;
+  res: cint;
 begin
   req.tv_sec := ms div 1000;
   req.tv_nsec := (ms mod 1000) * 1000000;
-  while (FpNanosleep(@req, @rem) <> 0) do
-        req := rem;
+  repeat
+    res := FpNanosleep(@req, @rem);
+    req := rem;
+  until (res = 0) or (fpgeterrno <> ESysEINTR);
 end;
 
 function FindPlayerProc: TPid;
@@ -375,7 +378,7 @@ end;
 begin
   if (playerAppPid = 0) then
      playerAppPid := FindPlayerProc; // It may already be running?
-  if (playerAppPid = 0) or (fpKill(playerAppPid, 0) <> 0) then
+  if (playerAppPid = 0) or (FpKill(playerAppPid, 0) <> 0) then
      begin
        playerAppPid := 0;
        lua_pushboolean(L, LongBool(0));
@@ -506,10 +509,11 @@ var
   currWorkDir, exePath, gamePid: string;
   exePathBuf: array [0..1023] of char;
   gamePidBuf: array [0..128] of char;
-  i: integer;
+  len: integer;
   procArgs: array [0..2] of PChar;
   locProcID, tempProcPID: TPid;
   tempPipe: TFilDes;
+  signalMask: sigset_t;
 begin
   Result := 1;
   try
@@ -518,23 +522,25 @@ begin
     if (currWorkDir <> '') and (currWorkDir[Length(currWorkDir)] <> '/') then
        currWorkDir := currWorkDir + '/';
     exePath := currWorkDir + 'extensions/x4_ors/bin/linux64/x4_ors_player.elf';
-    FillChar(exePathBuf, Length(exePathBuf), 0);
-    for i := 0 to Length(exePath) - 1 do
-        begin
-          if (i = High(exePathBuf)) then
-             break;
-          exePathBuf[i] := exePath[i + 1];
-        end;
+    FillChar(exePathBuf, Length(exePathBuf) * SizeOf(char), #0);
+    len := Length(exePath);
+    if (len > (Length(exePathBuf) - 1)) or (len <= 0) then
+       begin
+         lua_pushinteger(L, 0);
+         exit(1);
+       end;
+    Move(exePath[1], exePathBuf[0], len * SizeOf(char));
 
     // Game PID
     Str(FpGetpid, gamePid);
-    FillChar(gamePidBuf, Length(gamePidBuf), 0);
-    for i := 0 to Length(gamePid) - 1 do
-        begin
-          if (i = High(gamePidBuf)) then
-             break;
-          gamePidBuf[i] := gamePid[i + 1];
-        end;
+    FillChar(gamePidBuf, Length(gamePidBuf) * SizeOf(char), #0);
+    len := Length(gamePid);
+    if (len > (Length(gamePidBuf) - 1)) or (len <= 0) then
+       begin
+         lua_pushinteger(L, 0);
+         exit(1);
+       end;
+    Move(gamePid[1], gamePidBuf[0], len * SizeOf(char));
 
     // Proc Args setup
     procArgs[0] := @exePathBuf[0];
@@ -549,6 +555,7 @@ begin
     // We're in the context of the child within this IF block!
     if (tempProcPID = 0) then
        begin
+         FpSetsid;
          FpClose(tempPipe[0]);
          locProcID := FpFork;
 
@@ -556,9 +563,16 @@ begin
          if (locProcID = 0) then
             begin
               FpClose(tempPipe[1]);
-              FpSetsid;
+              if (FpSigProcMask(SIG_SETMASK, nil, @signalMask) = 0) then
+                 begin
+                   fpSigDelSet(signalMask, SIGTERM);
+                   fpSigDelSet(signalMask, SIGINT);
+                   fpSigDelSet(signalMask, SIGQUIT);
+                   fpSigDelSet(signalMask, SIGHUP);
+                   fpSigProcMask(SIG_SETMASK, @signalMask, nil);
+                 end;
               FpExecv(PChar(@exePathBuf[0]), @procArgs[0]); // We now jump to the EXE. If we're good, we won't return...
-              fpExit(127);
+              FpExit(127);
             end;
 
          // We're in the context of the child again

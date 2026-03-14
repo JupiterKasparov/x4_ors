@@ -10,7 +10,7 @@ uses
   {$IFDEF MSWINDOWS}
   Windows
   {$ELSE}
-  BaseUnix, xlib, x, gtk2, gdk2
+  xlib, x, gtk2, gdk2
   {$ENDIF};
 
 type
@@ -93,8 +93,6 @@ begin
      Result := KeyAndShiftStateToKeyString(vk, []);
 end;
 {$ELSE}
-var
-  xdisplay: PDisplay;
 
 function GetPlatformKeyName(vk: Word): string;
 var
@@ -102,14 +100,9 @@ var
   pName: PChar;
 begin
   Result := '';
-  if (xdisplay <> nil) then
-     begin
-       lsym := TKeySym(vk);
-       XKeysymToString(lsym);
-       pName := XKeysymToString(lsym);
-       if (pName <> nil) then
-          Result := Trim(StrPas(pName));
-     end;
+  pName := XKeysymToString(TKeySym(vk));
+  if (pName <> nil) then
+     Result := Trim(StrPas(pName));
 end;
 {$ENDIF}
 
@@ -229,15 +222,6 @@ procedure TFrmKeyEditor.ev_Unbind(Sender: TObject);
 begin
   SetKeycode(0);
 end;
-
-{$IFDEF LINUX}
-initialization
-  xdisplay := XOpenDisplay(nil);
-
-finalization
-  if (xdisplay <> nil) then
-     XCloseDisplay(xdisplay);
-{$ENDIF}
 
 end.
 

@@ -3,13 +3,12 @@
   <ProjectSession>
     <PathDelim Value="\"/>
     <Version Value="12"/>
-    <BuildModes Active="Windows64"/>
+    <BuildModes Active="Linux64"/>
     <Units>
       <Unit>
         <Filename Value="x4_ors_editor.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="5"/>
-        <CursorPos Y="31"/>
         <UsageCount Value="114"/>
         <Loaded Value="True"/>
       </Unit>

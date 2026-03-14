@@ -13,7 +13,7 @@ uses
     {$IFDEF MSWINDOWS}
     Windows,
     {$ELSE}
-    cthreads, clocale, BaseUnix, Unix,
+    cthreads, clocale, BaseUnix, Unix, termio,
     {$ENDIF}
     SysUtils, Classes, ctypes,
     FileUtil, strutils, fpjson,
@@ -64,12 +64,12 @@ var
 var
   parentPid: TPid = 0;
   bHasSigTerm: boolean = false;
+  sigTermHandlers, sigIgnoreHandlers: sigactionrec;
 
-procedure SigTermHandler(sig: cint); cdecl;
+procedure SigTermHandler(sig: cint; info: psiginfo; context: PSigContext); cdecl;
 begin
   bHasSigTerm := true;
 end;
-
 {$ENDIF}
 
 function IsGameRunning: boolean;
@@ -557,9 +557,18 @@ begin
   if (fpGetPriority(PRIO_PROCESS, 0) > -5) then
      fpSetPriority(PRIO_PROCESS, 0, -5);
 
-  FpSignal(SIGTERM, @SigTermHandler); // Linux: add SIGTERM handler (possible in Steam Sandbox)
+  // Handle termination signal requests
+  FillChar(sigTermHandlers, SizeOf(sigTermHandlers), 0);
+  sigTermHandlers.sa_handler := @SigTermHandler;
+  FillChar(sigIgnoreHandlers, SizeOf(sigIgnoreHandlers), 0);
+  sigIgnoreHandlers.sa_handler := sigactionhandler_t(SIG_IGN);
+  FPSigaction(SIGTERM, @sigTermHandlers, nil);
+  FPSigaction(SIGINT, @sigTermHandlers, nil);
+  FPSigaction(SIGQUIT, @sigTermHandlers, nil);
+  FPSigaction(SIGHUP, @sigIgnoreHandlers, nil);
   {$ENDIF}
 
+  // Application setup
   randomize;
   SetAppLogFile(GetUserDir + 'x4_ors_debug.log');
 
@@ -570,7 +579,10 @@ begin
      {$IFDEF MSWINDOWS}
      MessageBox(0, 'This application is internal to the X4_ORS mod! Do not start it directly!', '', MB_OK + MB_ICONERROR)
      {$ELSE}
-     writeln('This application is internal to the X4_ORS mod! Do not start it directly!')
+     begin
+       if (IsATTY(Output) <> 0) then
+          writeln('This application is internal to the X4_ORS mod! Do not start it directly!');
+     end
      {$ENDIF}
   else
      begin
@@ -586,11 +598,11 @@ begin
        ProgramMutexHandle := FpOpen(ProgramMutexName, O_CREAT or O_RDWR, &666);
        if (ProgramMutexHandle = -1) then
           begin
-            writeln('Failed to create mutex!');
+            LogError('Failed to create mutex lock file!');
             ExitCode := 1;
             exit;
           end;
-       if (FpFlock(ProgramMutexHandle, LOCK_EX or LOCK_NB) = 0) then
+       if (fpFlock(ProgramMutexHandle, LOCK_EX or LOCK_NB) = 0) then
           begin
             try
               SharedMemFile := shm_open(PChar(SharedMemName), O_CREAT or O_RDWR, &666);
@@ -632,7 +644,7 @@ begin
                      {$IFDEF MSWINDOWS}
                      CloseHandle(SharedMemFile);
                      {$ELSE}
-                     fpClose(SharedMemFile);
+                     FpClose(SharedMemFile);
                      shm_unlink(PChar(SharedMemName));
                      {$ENDIF}
                    end;
@@ -648,8 +660,8 @@ begin
               CloseHandle(ProgramMutexHandle);
               {$ELSE}
               fpFlock(ProgramMutexHandle, LOCK_UN);
-              fpClose(ProgramMutexHandle);
-              fpUnlink(ProgramMutexName);
+              FpClose(ProgramMutexHandle);
+              FpUnlink(ProgramMutexName);
               {$ENDIF}
             end
           end
@@ -657,7 +669,7 @@ begin
           {$IFDEF MSWINDOWS}
           CloseHandle(ProgramMutexHandle);
           {$ELSE}
-          fpClose(ProgramMutexHandle);
+          FpClose(ProgramMutexHandle);
           {$ENDIF}
      end;
 end.
