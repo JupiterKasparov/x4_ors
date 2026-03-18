@@ -1,6 +1,7 @@
 unit u_song;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}
+{$H+}
 
 interface
 
@@ -13,6 +14,7 @@ type
   TPlayableAudioTrack = class
   private
     bassStreamHandle: HSTREAM;
+    onlineSyncHandle: HSYNC;
     _isonline, _onlinestopped: boolean;
     _status: TSongStatus;
     _vol: double;
@@ -40,7 +42,44 @@ type
 
   TPlayableAudioTrackList = specialize TFPGList<TPlayableAudioTrack>;
 
+  TNoiseChannel = class
+  private
+    bassStreamHandle: HSTREAM;
+    _isstopped: boolean;
+    _vol: double;
+    function int_GetStatus: TSongStatus;
+    procedure int_SetStatus(st: TSongStatus);
+    procedure int_SetVolume(vol: double);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    property Status: TSongStatus read int_GetStatus write int_SetStatus;
+    property Volume: double read _vol write int_SetVolume;
+  end;
+
 implementation
+
+{$IFDEF MSWINDOWS}
+uses
+  Windows;
+{$ENDIF}
+
+{ TPlayableAudioTrack }
+
+procedure OnlineStreamEndProc(handle: HSYNC; channel, data: DWORD; obj: Pointer); {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+begin
+  try
+    if not TPlayableAudioTrack(obj)._onlinestopped then
+       begin
+         TPlayableAudioTrack(obj)._status := ssError;
+         TPlayableAudioTrack(obj)._errno := BASS_ERROR_BUFLOST;
+         TPlayableAudioTrack(obj).bassStreamHandle := 0;
+       end;
+    TPlayableAudioTrack(obj).onlineSyncHandle := 0;
+  except
+    ; // Not an error! Can happen even in normal operation!
+  end;
+end;
 
 var
   OnlineLoadingList: TThreadList;
@@ -77,6 +116,7 @@ begin
                 TPlayableAudioTrack(obj).bassStreamHandle := bassStreamHandle;
                 BASS_ChannelPlay(TPlayableAudioTrack(obj).bassStreamHandle, BOOL(0));
                 TPlayableAudioTrack(obj).int_SetVolume(TPlayableAudioTrack(obj)._vol);
+                TPlayableAudioTrack(obj).onlineSyncHandle := BASS_ChannelSetSync(TPlayableAudioTrack(obj).bassStreamHandle, BASS_SYNC_FREE, 0, @OnlineStreamEndProc, obj);
               end
 
            // Already stopped
@@ -254,6 +294,7 @@ begin
        _isonline := true;
        _onlinestopped := true;
        bassStreamHandle := 0;
+       onlineSyncHandle := 0;
      end
   else
      begin
@@ -299,6 +340,9 @@ begin
        finally
          OnlineLoadingList.UnlockList;
        end;
+       if (onlineSyncHandle <> 0) and (bassStreamHandle <> 0) then
+          BASS_ChannelRemoveSync(bassStreamHandle, onlineSyncHandle);
+       onlineSyncHandle := 0;
      end;
   if (bassStreamHandle <> 0) then
      BASS_StreamFree(bassStreamHandle);
@@ -326,6 +370,95 @@ begin
      exit(Format('BASS Error %d', [_errno]));
 end;
 
+{ TNoiseChannel }
+
+{$IFDEF MSWINDOWS}
+  {$IF not defined(BCryptGenRandom)}
+  function BCryptGenRandom(hAlgorithm: Pointer; pbBuffer: Pointer; cbBuffer: ULONG; dwFlags: ULONG): LongInt; stdcall; external 'bcrypt.dll';
+  {$ENDIF}
+{$ELSE}
+var
+  uRandomHandle: THandle;
+{$ENDIF}
+
+function NoiseChannelProc(handle: HSTREAM; buffer: Pointer; length: DWORD; user: Pointer): DWORD; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+begin
+  {$IFDEF MSWINDOWS}
+  if (BCryptGenRandom(nil, buffer, length, 2) = 0) then
+    Result := length
+  else
+    Result := 0;
+  {$ELSE}
+  if (uRandomHandle <> feInvalidHandle) then
+    Result := FileRead(uRandomHandle, buffer^, length)
+  else
+    Result := 0;
+  {$ENDIF}
+end;
+
+function TNoiseChannel.int_GetStatus:TSongStatus;
+begin
+  if _isstopped then
+     Result := ssStopped
+  else
+     Result := ssPlaying;
+end;
+
+procedure TNoiseChannel.int_SetStatus(st: TSongStatus);
+var
+  currStatus: TSongStatus;
+begin
+  // Current status
+  currStatus := int_GetStatus;
+  if (st <> ssPlaying) then
+     st := ssStopped;
+
+  // Modify status
+  if (st = ssPlaying) then
+     begin
+       if _isstopped then
+          begin
+            bassStreamHandle := BASS_StreamCreate(44100, 1, BASS_SAMPLE_8BITS, @NoiseChannelProc, Pointer(Self));
+            if (bassStreamHandle <> 0) then
+               begin
+                 _isstopped := false;
+                 BASS_ChannelPlay(bassStreamHandle, BOOL(0));
+                 int_SetVolume(_vol);
+               end;
+          end;
+     end
+  else if (currStatus = ssPlaying) then
+     begin
+       _isstopped := true;
+       BASS_StreamFree(bassStreamHandle);
+       bassStreamHandle := 0;
+     end;
+end;
+
+procedure TNoiseChannel.int_SetVolume(vol: double);
+begin
+  _vol := Clamp(vol, 0.0, 1.0);
+  if (int_GetStatus = ssPlaying) then
+     BASS_ChannelSetAttribute(bassStreamHandle, BASS_ATTRIB_VOL, _vol);
+end;
+
+constructor TNoiseChannel.Create;
+begin
+  inherited;
+  bassStreamHandle := 0;
+  _isstopped := true;
+  _vol := 0.0;
+end;
+
+destructor TNoiseChannel.Destroy;
+begin
+  int_SetStatus(ssStopped);
+  if (bassStreamHandle <> 0) then
+     BASS_StreamFree(bassStreamHandle);
+  inherited;
+end;
+
+
 initialization
   OnlineLoadingList := TThreadList.Create;
   BASS_Init(-1, 44100, BASS_DEVICE_NOSPEAKER, {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF}, nil);
@@ -333,12 +466,20 @@ initialization
   BASS_SetConfig(BASS_CONFIG_NET_PREBUF_WAIT, 0);
   BASS_SetConfig(71{BASS_CONFIG_NET_META}, 0);
   BASS_SetConfigPtr(BASS_CONFIG_NET_PROXY, nil);
+  BASS_SetConfig(BASS_CONFIG_NET_READTIMEOUT, 5000);
   BASS_SetConfigPtr(BASS_CONFIG_NET_AGENT, PChar('X4 ORS Playback Controller Application'));
+  {$IFDEF LINUX}
+  uRandomHandle := FileOpen('/dev/urandom', fmOpenRead);
+  {$ENDIF}
 
 finalization
   BASS_Stop;
   BASS_Free;
   FreeAndNil(OnlineLoadingList);
+  {$IFDEF LINUX}
+  if (uRandomHandle <> feInvalidHandle) then
+     FileClose(uRandomHandle);
+  {$ENDIF}
 
 end.
 

@@ -21,6 +21,7 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
+      <BuildNr Value="2"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4_ORS playback controller application" InternalName="X4_ORS"/>
     </VersionInfo>
     <BuildModes Count="2">
@@ -136,6 +137,9 @@
       </Debugging>
       <LinkSmart Value="True"/>
     </Linking>
+    <Other>
+      <CustomOptions Value="-vm6058"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

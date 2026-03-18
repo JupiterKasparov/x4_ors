@@ -1,6 +1,7 @@
 unit u_logger;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}
+{$H+}
 
 interface
 

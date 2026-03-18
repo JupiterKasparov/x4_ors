@@ -2,7 +2,6 @@ unit u_radio;
 
 {$mode objfpc}
 {$H+}
-{$MODESWITCH AdvancedRecords+}
 
 interface
 
@@ -28,6 +27,7 @@ type
     _stoptime: qword;
     _onlineretrytimer: qword;
     _onlinestoptimer: qword;
+    _onlinenoise: TNoiseChannel;
     _isactive: boolean;
     function int_GetFileName: string;
     function int_GetLength: integer;
@@ -89,6 +89,7 @@ type
   TRadioStation = class
   private
     _slots: TRadioStationSlotList;
+    _noise: TNoiseChannel;
     _rsname: string;
     _status: TRadioStatus;
     _volume: double;
@@ -180,11 +181,13 @@ begin
   _onlinestoptimer := 0;
   _onlineretrytimer := 0;
   _isactive := false;
+  _onlinenoise := TNoiseChannel.Create;
   Update(ssStopped, 0.0, 0, false);
 end;
 
 destructor TRadioStationSlotTrack.Destroy;
 begin
+  _onlinenoise.Free;
   _track.Free;
   inherited;
 end;
@@ -228,7 +231,23 @@ begin
                  _onlineretrytimer := 0;
                  _status := ssStopped;
                  _track.ResetOnlineStatus;
+                 _onlinenoise.Status := ssStopped;
+               end
+            else
+               begin
+                 _onlinenoise.Volume := _volume * 0.15;
+                 _onlinenoise.Status := ssPlaying;
                end;
+          end
+       else
+          begin
+            if _isactive then
+               begin
+                 _onlinenoise.Volume := _volume * 0.15;
+                 _onlinenoise.Status := ssPlaying;
+               end
+            else
+               _onlinenoise.Status := ssStopped;
           end;
      end;
 
@@ -271,17 +290,17 @@ begin
                     end
                  else
                     begin
-                      _track.Status := ssPlaying;
                       _track.Volume := _volume;
+                      _track.Status := ssPlaying;
                       _track.PositionMs := _timer;
                     end;
                end
             // State not changed
             else
                begin
+                 _track.Volume := _volume;
                  if (_track.Status <> ssPlaying) then
                      _track.Status := ssPlaying;
-                  _track.Volume := _volume;
                end;
           end
        // Inactive state
@@ -399,7 +418,7 @@ begin
   Result := 0.0;
   for i := 0 to High(_owners) do
       for j := 0 to High(factionData^) do
-          if (CompareText(_owners[i], factionData^[j].FactionName) = 0) then
+          if (_owners[i] = '*') or (CompareText(_owners[i], factionData^[j].FactionName) = 0) then
              begin
                if (factionData^[j].DistanceKm > 0.0) then
                   d := power(_df, factionData^[j].DistanceKm)
@@ -423,7 +442,7 @@ begin
   Result := double.MaxValue;
   for i := 0 to High(_owners) do
       for j := 0 to High(factionData^) do
-          if (CompareText(_owners[i], factionData^[j].FactionName) = 0) then
+          if (_owners[i] = '*') or (CompareText(_owners[i], factionData^[j].FactionName) = 0) then
              begin
                d := factionData^[j].DistanceKm;
                if (d < Result) then
@@ -440,7 +459,7 @@ begin
 
   for i := 0 to High(lst) do
       for j := 0 to High(_owners) do
-          if (CompareText(lst[i], _owners[j]) = 0) then
+          if (lst[i] = '*') or (_owners[j] = '*') or (CompareText(lst[i], _owners[j]) = 0) then
              exit(false); // Ownership collision
 
   // No collision
@@ -458,8 +477,13 @@ begin
 end;
 
 function TRadioStationSlot.CanDoUserInput: boolean;
+var
+  playerOwned: boolean;
 begin
-  Result := _ismp3 and (not _mp3controldisabled) and IsValid and (Length(_owners) = 0);
+  if not IsValid then
+     exit(false);
+  playerOwned := (Length(_owners) = 0) or ((Length(_owners) = 1) and (CompareText(_owners[0], 'player') = 0)); // No owners or only player owned
+  Result := _ismp3 and (not _mp3controldisabled) and  playerOwned;
 end;
 
 procedure TRadioStationSlot.SetRandomPos(MaxRandomPos: double);
@@ -608,6 +632,7 @@ constructor TRadioStation.Create;
 begin
   inherited;
   _slots := TRadioStationSlotList.Create;
+  _noise := TNoiseChannel.Create;
   _rsname := '';
   _mastervol := 0.0;
   Process(nil, 0.0, rsPaused, 0, false);
@@ -619,6 +644,7 @@ var
 begin
   for i := 0 to _slots.Count - 1 do
       _slots[i].Free;
+  _noise.Free;
   _slots.Free;
   inherited;
 end;
@@ -741,7 +767,7 @@ end;
 procedure TRadioStation.Process(factionData: PFactionDistanceDataArray; newVolume: double; playbackStatus: TRadioStatus; currentTime: qword; bIsActiveRadio: boolean);
 var
   i, locLoudestIndex: integer;
-  locVol, locCalcVol, locLoudestVol, locSlotVol: double;
+  locVol, locCalcVol, locLoudestVol, locSlotVol, maxCalcVol, dynNoiseAmpl, na1, na2, na3: double;
 begin
   if (not IsValid) then
      exit;
@@ -759,6 +785,7 @@ begin
      begin
        for i := 0 to _slots.Count - 1 do
            _slots[i].Process(0.0, ssPaused, currentTime, bIsActiveRadio);
+       _noise.Status := ssStopped;
      end
   else if (_status = rsPlaying) then
      begin
@@ -775,6 +802,7 @@ begin
                        locLoudestIndex := i;
                      end;
                 end;
+            maxCalcVol := 0.0;
             for i := 0 to _slots.Count - 1 do
                 begin
                   locSlotVol := _slots[i].GetBaseVolume(factionData);
@@ -785,7 +813,20 @@ begin
                   int_AdjustSuppression(factionData, i, locLoudestIndex, locLoudestVol);
                   locCalcVol := locCalcVol - _slots[i]._suppression;
                   _slots[i].Process(locCalcVol * locVol, ssPlaying, currentTime, true);
+                  if (locCalcVol > maxCalcVol) then
+                     maxCalcVol := locCalcVol;
                 end;
+            if (maxCalcVol < 0.99) then
+               begin
+                 na1 := sin(currentTime / 100000.0) + 1.0;
+                 na2 := sin(currentTime / 5950.0) + 1.0;
+                 na3 := sin(currentTime / 373.0) + 1.0;
+                 dynNoiseAmpl := (na1 + (na2 / 2.0) + (na3 / 3.0)) / 6.0;
+                 _noise.Volume := dynNoiseAmpl * Clamp(1.0 - power(maxCalcVol, 0.25), 0.0, 1.0) * 0.15 * locVol;
+                 _noise.Status := ssPlaying;
+               end
+            else
+               _noise.Status := ssStopped;
           end
        else
           begin
@@ -794,12 +835,14 @@ begin
                   _slots[i]._suppression := 0.0;
                   _slots[i].Process(0.0, ssPlaying, currentTime, false);
                 end;
+             _noise.Status := ssStopped;
           end;
      end
   else
      begin
        for i := 0 to _slots.Count - 1 do
            _slots[i].Process(0.0, ssStopped, currentTime, false);
+        _noise.Status := ssStopped;
      end;
 end;
 

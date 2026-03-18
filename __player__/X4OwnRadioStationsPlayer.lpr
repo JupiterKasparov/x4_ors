@@ -291,6 +291,12 @@ begin
       radioStation.RadioStationName := stationName;
       for i := 0 to slots.Count - 1 do
           begin
+            if (i >= 15) then
+               begin
+                 Log('INIT', Format('Radio station ''%s'' has too many tracks (%d)! Skipping the remainder...', [radioStation.RadioStationName, slots.Count]));
+                 break;
+               end;
+
             slot := TJSONObject(slots[i]);
             if (slot = nil) or (slot.JSONType <> jtObject) then
                continue;
@@ -311,7 +317,7 @@ begin
             slotIsOrdered := GetBooleanSetting(slot, 'isOrdered');
             slotIsNotControllable := GetBooleanSetting(slot, 'disableUserInteraction');
 
-            // Rs lsot load (MP3)
+            // Rs slot load (MP3)
             if slotIsMP3 then
                begin
                  mp3List.Clear;
@@ -381,6 +387,7 @@ end;
 // ********************************
 procedure InitProgram;
 var
+  settingsDirs: array [0..1] of string; // We search for the settings file at these locations
   settings: TJSONObject;
   arr: TJSONArray;
   i: integer;
@@ -392,7 +399,9 @@ begin
   SetLength(ProgramSettings.Keys, 0);
 
   // Load settings and radio stations
-  settings := TJSONObject(LoadSettings(GetUserDir + 'x4_ors_settings.json'));
+  settingsDirs[0] := GetParentFolder(GetExeFolder, 2); // 2 levels up (ie. the 'x4_ors' mod dirextory)
+  settingsDirs[1] := GetUserDir; // User directory
+  settings := TJSONObject(LoadSettings(FindFileAt('x4_ors_settings.json', settingsDirs)));
   if (settings <> nil) and (settings.JSONType = jtObject) then
      begin
        // Program settings
@@ -423,7 +432,14 @@ begin
        arr := GetListSetting(settings, 'radioStations');
        if (arr <> nil) then
           for i := 0 to arr.Count - 1 do
-              LoadRadioStation(arr[i]);
+              begin
+                if (i >= 31) then
+                   begin
+                     Log('INIT', Format('There are too many radio stations (%d)! Skipping the remainder...', [arr.Count]));
+                     break;
+                   end;
+                LoadRadioStation(arr[i]);
+              end;
      end
   else
      begin

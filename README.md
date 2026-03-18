@@ -1,6 +1,6 @@
 # X4: Foundations - Own Radio Stations
 
-This mod makes it possible for players to listen to their gavorite music in X4: Foundations.
+This mod makes it possible for players to listen to their favorite music in X4: Foundations.
 It solves the problem of "muting the game and listening to music in the background" by integrating a custom-made music player solution into the game.
 The fully playable mod can be downloaded from https://www.nexusmods.com/x4foundations/mods/544
 

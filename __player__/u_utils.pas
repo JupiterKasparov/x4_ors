@@ -1,12 +1,16 @@
 unit u_utils;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}
+{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, IniFiles, strutils;
+  Classes, SysUtils, IniFiles, strutils, {$IFDEF MSWINDOWS}Windows{$ELSE}BaseUnix{$ENDIF};
 
+function GetParentFolder(folder: string; level: integer = 1): string;
+function FindFileAt(fileName: string; folders: TStringArray): string;
+function GetExeFolder: string;
 function IsNetFile(fn: string): boolean;
 function ReadStringSetting(ini: TIniFile; name, def: string): string;
 function ReadIntSetting(ini: TIniFile; name: string; def: integer): integer;
@@ -25,14 +29,54 @@ var
 
 implementation
 
+function GetParentFolder(folder: string; level: integer = 1): string;
+var
+  i: integer;
+begin
+  if not DirectoryExists(folder) then
+     folder := ExtractFilePath(folder);
+  Result := folder;
+  if (level > 0) then
+     for i := 1 to level do
+         Result := ExtractFilePath(ExcludeTrailingPathDelimiter(Result));
+  Result := IncludeTrailingPathDelimiter(Result);
+end;
+
+function FindFileAt(fileName: string; folders: TStringArray): string;
+var
+  i: integer;
+  fn: string;
+begin
+  Result := '';
+  for i := 0 to High(folders) do
+      begin
+        fn := IncludeTrailingPathDelimiter(folders[i]) + fileName;
+        if FileExists(fn) then
+           exit(fn);
+      end;
+end;
+
+function GetExeFolder: string;
+{$IFDEF MSWINDOWS}
+var
+  exeFilePath: array [0..MAX_PATH] of char = '';
+begin
+  GetModuleFileName(GetModuleHandle(nil), @exeFilePath, 32767);
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(StrPas(exeFilePath)));
+end;
+{$ELSE}
+begin
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(fpReadLink('/proc/self/exe')));
+end;
+{$ENDIF}
+
 function IsNetFile(fn: string): boolean;
 begin
+  // Only check whether the path requires network functions to access
   fn := Trim(fn);
-  if AnsiStartsStr('\\', fn) then
-     exit(true) // UNC path
-  else if (Pos('://', fn) > 0) then
-     exit(true); // Internet path
-  exit(false); // Local path
+  if (Pos('://', fn) > 0) then
+     exit(true);
+  exit(false);
 end;
 
 function ReadStringSetting(ini: TIniFile; name, def: string): string;
