@@ -13,10 +13,9 @@ uses
     {$IFDEF MSWINDOWS}
     Windows,
     {$ELSE}
-    cthreads, clocale, BaseUnix, Unix, termio,
+    cthreads, cwstring, clocale, BaseUnix, Unix, termio,
     {$ENDIF}
-    SysUtils, Classes, ctypes,
-    FileUtil, strutils, fpjson,
+    SysUtils, Classes, ctypes, strutils, fpjson,
     u_logger, u_radio, u_utils, u_manager, u_jsonmanager;
 
 {$IFDEF LINUX}
@@ -115,37 +114,15 @@ begin
 end;
 {$ENDIF}
 
-procedure GetMP3Data(lst: TStrings; dir: string);
-var
-  rec: TSearchRec;
-  fn: string;
-begin
-  lst.Clear;
-  DoDirSeparators(dir);
-  dir := IncludeTrailingPathDelimiter(dir);
-  if (FindFirst(dir + '*', faAnyFile, rec) = 0) then
-     begin
-       repeat
-          if ((rec.Attr and faDirectory) = faDirectory) or (rec.Name = '.') or (rec.Name = '..') then
-             continue; // Do not load directories!
-          fn := dir + rec.Name;
-          DoDirSeparators(fn);
-          if (lst.IndexOf(fn) < 0) then
-             lst.Add(fn);
-       until (FindNext(rec) <> 0);
-       FindClose(rec);
-     end;
-end;
-
 // ********************************
 // UTILS
 // ********************************
 procedure SendProgramData;
 var
-  i: integer;
+  i, l: integer;
   offset: dword;
   names: TStringArray;
-  s: string;
+  pc: PChar;
 begin
   offset := 1;
 
@@ -156,13 +133,14 @@ begin
         begin
           PByte(MemoryBuffer + offset)^ := 1; // Data type: Rs Name
           inc(offset);
-          s := names[i];
-          if (Length(s) > 0) then
+          pc := PChar(names[i]);
+          l := strlen(pc);
+          if (l > 0) then
              begin
-               Move(s[1], (MemoryBuffer + offset)^, Length(s));
-               inc(offset, Length(s));
+               Move(pc^, (MemoryBuffer + offset)^, l);
+               inc(offset, l);
              end;
-          PChar(MemoryBuffer + offset)^ := #0;
+          PByte(MemoryBuffer + offset)^ := 0;
           inc(offset);
         end;
   finally
@@ -186,6 +164,9 @@ begin
 
   // Closing tag
   PByte(MemoryBuffer + offset)^ := 0;
+
+  // OK
+  WriteBarrier;
 end;
 
 procedure ProcessGameData;
@@ -243,6 +224,9 @@ begin
              end;
      end;
   until gamedataparam = 0;
+
+  // OK
+  ReadBarrier;
 end;
 
 // ********************************
@@ -313,7 +297,10 @@ begin
             slotIsMP3 := GetBooleanSetting(slot, 'isMP3Player');
             slotURL := GetStringSetting(slot, 'url');
             if (slotURL = '') then
-               continue;
+               begin
+                 Log('INIT', Format('Radio station ''%s'' cannot load track %d, URL is empty!', [radioStation.RadioStationName, i + 1]));
+                 continue;
+               end;
             slotIsOrdered := GetBooleanSetting(slot, 'isOrdered');
             slotIsNotControllable := GetBooleanSetting(slot, 'disableUserInteraction');
 
@@ -326,7 +313,9 @@ begin
                       Log('INIT', Format('Radio station ''%s'' cannot load MP3 player track %d from nonexistent directory ''%s''!', [radioStation.RadioStationName, i + 1, slotURL]));
                       continue;
                     end;
-                 GetMP3Data(mp3List, slotURL);
+                 GetFileList(slotURL, mp3List);
+                 if ProgramSettings.RandomizeTracks then
+                    ShuffleList(mp3List);
                  if slotIsOrdered then
                     begin
                       orderList.Clear;
@@ -341,9 +330,7 @@ begin
                                end;
                            OrderListByList(mp3List, orderList);
                          end;
-                    end
-                 else if ProgramSettings.RandomizeTracks then
-                    ShuffleList(mp3List);
+                    end;
                  if not radioStation.AddRadioSlot(slotOwners, mp3List, slotLoudness, slotDampFactor, slotIsNotControllable) then
                     Log('INIT', Format('Radio station ''%s'' failed to load MP3 player track %d!', [radioStation.RadioStationName, i + 1]));
                end
@@ -365,13 +352,13 @@ begin
       if not radioStation.IsValid then
          begin
            Log('INIT', Format('Radio station ''%s'' failed to load!', [radioStation.RadioStationName]));
-           radioStation.Free;
+           FreeAndNil(radioStation);
          end
       else
          Manager.AddRadioStation(radioStation);
     except
       LogError(ExceptObject, ExceptAddr);
-      radioStation.Free;
+      FreeAndNil(radioStation);
     end;
   finally
     mp3List.Clear;
@@ -403,7 +390,7 @@ begin
   settingsDirs[1] := GetUserDir; // User directory
   settings := TJSONObject(LoadSettings(FindFileAt('x4_ors_settings.json', settingsDirs)));
   if (settings <> nil) and (settings.JSONType = jtObject) then
-     begin
+     try
        // Program settings
        ProgramSettings.Latency := Clamp(GetIntegerSetting(settings, 'global.maxLatency', 500), 10, 5000);
        ProgramSettings.RandomizeTracks := GetBooleanSetting(settings, 'global.randomizeTracks', true);
@@ -440,11 +427,13 @@ begin
                    end;
                 LoadRadioStation(arr[i]);
               end;
+     finally
+       FreeAndNil(settings);
      end
   else
      begin
        Log('INIT', 'Failed to load settings!');
-       ProgramSettings.Latency := 1000;
+       ProgramSettings.Latency := 500;
        ProgramSettings.RandomizeTracks := true;
        ProgramSettings.LinearVolume := false;
        ProgramSettings.MasterLoudness := 1.0;
@@ -488,64 +477,70 @@ begin
           {$ELSE}
           MemoryBuffer := Fpmmap(nil, SharedMemSize, PROT_READ or PROT_WRITE, MAP_SHARED, SharedMemFile, 0);
           {$ENDIF}
-          try
-            case PByte(MemoryBuffer)^ of
-                  1:
-                    begin
-                      ProcessGameData;
-                      lastUpdateTime := currentTime;
-                      if GameStatus.IsActiveMenu then
-                         begin
-                           if GameStatus.CanHearMusic then
-                              Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume, rsPlaying, currentTime)
-                           else
-                              Manager.Process(-1, 0.0, nil, false, rsPlaying, currentTime);
-                         end
-                      else
-                         Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
-                      PByte(MemoryBuffer)^ := 0; // Clear memory
-                    end;
-                  3:
-                    begin
-                      SendProgramData;
-                      PByte(MemoryBuffer)^ := 2; // Output: Answer
-                    end;
-                  4:
-                    begin
-                      Manager.ReplayCurrTrack;
-                      PByte(MemoryBuffer)^ := 0; // Clear memory
-                    end;
-                  5:
-                    begin
-                      Manager.SkipNextTrack;
-                      PByte(MemoryBuffer)^ := 0; // Clear memory
-                    end;
-                  6:
-                    begin
-                      Log('MAIN', 'Reloading application...');
-                      PByte(MemoryBuffer)^ := 0; // Clear memory
-                      exit(true); // -> Reload program after function return
-                    end;
-                  7:
-                    begin
-                      Manager.SkipPrevTrack;
-                      PByte(MemoryBuffer)^ := 0; // Clear memory
-                    end;
-                  else
-                    begin
-                      if ((currentTime - lastUpdateTime) > ProgramSettings.Latency) then
-                         Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
-                      if (PByte(MemoryBuffer)^ <> 2) then
-                         PByte(MemoryBuffer)^ := 0; // Only clear memory, if the script has already processed the data!
-                    end;
-            end;
-          finally
-            {$IFDEF MSWINDOWS}
-            UnmapViewOfFile(MemoryBuffer);
-            {$ELSE}
-            Fpmunmap(MemoryBuffer, SharedMemFile);
-            {$ENDIF}
-          end;
+          if (MemoryBuffer <> {$IFDEF MSWINDOWS}nil{$ELSE}MAP_FAILED{$ENDIF}) then
+             try
+               case PByte(MemoryBuffer)^ of
+                     1:
+                       begin
+                         ProcessGameData;
+                         PByte(MemoryBuffer)^ := 0; // Clear memory
+                         lastUpdateTime := currentTime;
+                         if GameStatus.IsActiveMenu then
+                            begin
+                              if GameStatus.CanHearMusic then
+                                 Manager.Process(GameStatus.CurrentStationIndex, ProgramSettings.MasterLoudness * GameStatus.MusicVolume, @ClosestStationData, ProgramSettings.LinearVolume, rsPlaying, currentTime)
+                              else
+                                 Manager.Process(-1, 0.0, nil, false, rsPlaying, currentTime);
+                            end
+                         else
+                            Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+                       end;
+                     3:
+                       begin
+                         SendProgramData;
+                         PByte(MemoryBuffer)^ := 2; // Output: Answer
+                       end;
+                     4:
+                       begin
+                         Manager.ReplayCurrTrack;
+                         PByte(MemoryBuffer)^ := 0; // Clear memory
+                       end;
+                     5:
+                       begin
+                         Manager.SkipNextTrack;
+                         PByte(MemoryBuffer)^ := 0; // Clear memory
+                       end;
+                     6:
+                       begin
+                         PByte(MemoryBuffer)^ := 0; // Clear memory
+                         Log('MAIN', 'Reloading application...');
+                         exit(true); // -> Reload program after function return
+                       end;
+                     7:
+                       begin
+                         Manager.SkipPrevTrack;
+                         PByte(MemoryBuffer)^ := 0; // Clear memory
+                       end;
+                     else
+                       begin
+                         if ((currentTime - lastUpdateTime) > ProgramSettings.Latency) then
+                            Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+                         if (PByte(MemoryBuffer)^ <> 2) then
+                            PByte(MemoryBuffer)^ := 0; // Only clear memory, if the script has already processed the data!
+                       end;
+               end;
+             finally
+               {$IFDEF MSWINDOWS}
+               UnmapViewOfFile(MemoryBuffer);
+               {$ELSE}
+               Fpmunmap(MemoryBuffer, SharedMemFile);
+               {$ENDIF}
+             end
+          else
+             begin
+               LogError('Memory map failed!');
+               Manager.Process(-1, 0.0, nil, false, rsPaused, currentTime);
+             end;
 
           // Don't consume 100% CPU, we have to wait
           Sleep(ProgramSettings.Latency div 4);
@@ -558,8 +553,7 @@ end;
 {$R *.res}
 
 var
-  mustRunProgram: boolean = true;
-  ProgramMutexHandle: {$IFDEF MSWINDOWS} HANDLE{$ELSE}cint{$ENDIF};
+  ProgramMutexHandle: {$IFDEF MSWINDOWS}HANDLE{$ELSE}cint{$ENDIF};
 
 begin
   // ********************************
@@ -609,12 +603,17 @@ begin
             ProgramMutexHandle := CreateMutex(nil, BOOL(1), PChar(ProgramMutexName));
             try
               SharedMemFile := CreateFileMapping(INVALID_HANDLE_VALUE, nil, PAGE_READWRITE, 0, SharedMemSize, PChar(SharedMemName));
-              if (SharedMemFile <> 0) then
+              if (SharedMemFile = 0) then
+                 begin
+                   LogLastError;
+                   ExitCode := 1;
+                 end
+              else
        {$ELSE}
        ProgramMutexHandle := FpOpen(ProgramMutexName, O_CREAT or O_RDWR, &666);
        if (ProgramMutexHandle = -1) then
           begin
-            LogError('Failed to create mutex lock file!');
+            LogLastError;
             ExitCode := 1;
             exit;
           end;
@@ -626,35 +625,35 @@ begin
                  begin
                    if (FpFtruncate(SharedMemFile, SharedMemSize) <> 0) then
                       begin
-                        SharedMemFile := -1;
+                        LogLastError;
+                        FpClose(SharedMemFile);
                         shm_unlink(PChar(SharedMemName));
+                        SharedMemFile := -1;
+                        ExitCode := 1;
                       end;
+                 end
+              else
+                 begin
+                   LogLastError;
+                   ExitCode := 1;
                  end;
               if (SharedMemFile <> -1) then
        {$ENDIF}
                  begin
                    try
-                     while mustRunProgram do
+                     while true do
                            try
-                             InitProgram;
                              try
-                               mustRunProgram := RunProgram;
+                               InitProgram;
+                               if (not RunProgram) then
+                                  break;
                              except
-                               mustRunProgram := false;
                                LogError(ExceptObject, ExceptAddr);
-                               ExitCode := 2;
+                               ExitCode := 1;
+                               break;
                              end;
-                             try
-                               FiniProgram;
-                             except
-                               mustRunProgram := false;
-                               LogError(ExceptObject, ExceptAddr);
-                               ExitCode := 3;
-                             end;
-                           except
-                             mustRunProgram := false;
-                             LogError(ExceptObject, ExceptAddr);
-                             ExitCode := 1;
+                           finally
+                             FiniProgram;
                            end;
                    finally
                      {$IFDEF MSWINDOWS}
@@ -664,11 +663,6 @@ begin
                      shm_unlink(PChar(SharedMemName));
                      {$ENDIF}
                    end;
-                 end
-              else
-                 begin
-                   LogError(Format('Failed to setup shared memory! Error code: %d!', [{$IFDEF MSWINDOWS}GetLastError{$ELSE}fpGetErrno{$ENDIF}]));
-                   ExitCode := 1;
                  end;
             finally
               {$IFDEF MSWINDOWS}

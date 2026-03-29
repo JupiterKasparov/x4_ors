@@ -14,11 +14,9 @@ implementation
 function IsNetFile(fn: string): boolean;
 begin
   fn := Trim(fn);
-  if AnsiStartsStr('\\', fn) then
-     exit(true) // UNC path
-  else if (Pos('://', fn) > 0) then
-     exit(true); // Internet path
-  exit(false); // Local path
+  if (Pos('://', fn) > 0) then
+     exit(true);
+  exit(false);
 end;
 
 function ConvertOldSettings(fileName: string): TJSONObject;
@@ -106,7 +104,7 @@ begin
                             end;
                       System.Close(f);
                       {$I+}
-                      if (IOResult <> 0) then
+                      if (IOResult = 0) then
                          slot.Arrays['orderByList'] := slotOrderList
                       else
                          slotOrderList.Free;

@@ -84,7 +84,15 @@
         <UsageCount Value="85"/>
       </Unit>
     </Units>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory HistoryIndex="1">
+      <Position>
+        <Filename Value="editor.pas"/>
+        <Caret Line="174" Column="8" TopLine="157"/>
+      </Position>
+      <Position>
+        <Filename Value="editor.pas"/>
+      </Position>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes ActiveMode=""/>

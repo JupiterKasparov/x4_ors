@@ -21,7 +21,7 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
-      <BuildNr Value="2"/>
+      <RevisionNr Value="1"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4_ORS playback controller application" InternalName="X4_ORS"/>
     </VersionInfo>
     <BuildModes Count="2">
@@ -56,6 +56,9 @@
               <LinkerOptions Value="-rpath=\$ORIGIN"/>
             </Options>
           </Linking>
+          <Other>
+            <CustomOptions Value="-vm6058"/>
+          </Other>
         </CompilerOptions>
       </Item2>
     </BuildModes>
@@ -75,11 +78,6 @@
         </Mode0>
       </Modes>
     </RunParams>
-    <RequiredPackages Count="1">
-      <Item1>
-        <PackageName Value="LazUtils"/>
-      </Item1>
-    </RequiredPackages>
     <Units Count="7">
       <Unit0>
         <Filename Value="X4OwnRadioStationsPlayer.lpr"/>

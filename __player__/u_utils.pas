@@ -6,23 +6,18 @@ unit u_utils;
 interface
 
 uses
-  Classes, SysUtils, IniFiles, strutils, {$IFDEF MSWINDOWS}Windows{$ELSE}BaseUnix{$ENDIF};
+  Classes, SysUtils, strutils, {$IFDEF MSWINDOWS}Windows{$ELSE}BaseUnix{$ENDIF};
 
 function GetParentFolder(folder: string; level: integer = 1): string;
 function FindFileAt(fileName: string; folders: TStringArray): string;
 function GetExeFolder: string;
 function IsNetFile(fn: string): boolean;
-function ReadStringSetting(ini: TIniFile; name, def: string): string;
-function ReadIntSetting(ini: TIniFile; name: string; def: integer): integer;
-function ReadFloatSetting(ini: TIniFile; name: string; def: double): double;
-procedure WriteStringSetting(ini: TIniFile; name, value: string);
-procedure WriteIntSetting(ini: TIniFile; name: string; value: integer);
-procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
-procedure ShuffleList(lst: TStrings);
+procedure GetFileList(dir: string; var lst: TStrings);
+procedure ShuffleList(var lst: TStrings);
 function Clamp(flt, minvalue, maxvalue: double): double;
 function Clamp(ivalue, minvalue, maxvalue: integer): integer;
 function ParseList(lst: string): TStringArray;
-procedure OrderListByList(lst, orderBy: TStrings);
+procedure OrderListByList(var lst: TStrings; orderBy: TStrings);
 
 var
   X4OrsFormatSettings: TFormatSettings;
@@ -59,8 +54,9 @@ end;
 function GetExeFolder: string;
 {$IFDEF MSWINDOWS}
 var
-  exeFilePath: array [0..MAX_PATH] of char = '';
+  exeFilePath: array [0..32767] of char;
 begin
+  FillChar(exeFilePath, SizeOf(exeFilePath), 0);
   GetModuleFileName(GetModuleHandle(nil), @exeFilePath, 32767);
   Result := IncludeTrailingPathDelimiter(ExtractFilePath(StrPas(exeFilePath)));
 end;
@@ -79,73 +75,29 @@ begin
   exit(false);
 end;
 
-function ReadStringSetting(ini: TIniFile; name, def: string): string;
+procedure GetFileList(dir: string; var lst: TStrings);
 var
-  tok: integer;
-  value: string;
+  rec: TSearchRec;
+  fn: string;
 begin
-  tok := Pos('.', name);
-  if (tok <= 0) then
-     value := def;
-  value := RightStr(name, Length(name) - tok);
-  name := LeftStr(name, tok - 1);
-  Result := ini.ReadString(name, value, def);
-end;
-
-function ReadIntSetting(ini: TIniFile; name: string; def: integer): integer;
-var
-  i: integer;
-  s: string;
-begin
-  s := ReadStringSetting(ini, name, '??');
-  if TryStrToInt(s, i) then
-     Result := i
-  else
-     Result := def;
-end;
-
-function ReadFloatSetting(ini: TIniFile; name: string; def: double): double;
-var
-  f: double;
-  s: string;
-begin
-  s := ReadStringSetting(ini, name, '??');
-  if TryStrToFloat(s, f, X4OrsFormatSettings) then
-     Result := f
-  else
-     Result := def;
-end;
-
-procedure WriteStringSetting(ini: TIniFile; name, value: string);
-var
-  tok: integer;
-  section, identifier: string;
-begin
-  tok := Pos('.', name);
-  if (tok <= 0) then
+  lst.Clear;
+  DoDirSeparators(dir);
+  dir := IncludeTrailingPathDelimiter(dir);
+  if (SysUtils.FindFirst(dir + '*', faAnyFile, rec) = 0) then
      begin
-      section := '';
-      identifier := name;
-     end
-  else
-     begin
-       section := LeftStr(name, tok - 1);
-       identifier := RightStr(name, Length(name) - tok);
+       repeat
+          if ((rec.Attr and faDirectory) <> 0) or (rec.Name = '.') or (rec.Name = '..') then
+             continue; // Do not load directories!
+          fn := dir + rec.Name;
+          DoDirSeparators(fn);
+          if (lst.IndexOf(fn) < 0) then
+             lst.Add(fn);
+       until (SysUtils.FindNext(rec) <> 0);
+       SysUtils.FindClose(rec);
      end;
-  ini.WriteString(section, identifier, value);
 end;
 
-procedure WriteIntSetting(ini: TIniFile; name: string; value: integer);
-begin
-  WriteStringSetting(ini, name, IntToStr(value));
-end;
-
-procedure WriteFloatSetting(ini: TIniFile; name: string; value: double);
-begin
-  WriteStringSetting(ini, name, FloatToStr(value, X4OrsFormatSettings));
-end;
-
-procedure ShuffleList(lst: TStrings);
+procedure ShuffleList(var lst: TStrings);
 var
   i, r: integer;
 begin
@@ -205,7 +157,7 @@ begin
   until (tok <= 0);
 end;
 
-procedure OrderListByList(lst, orderBy: TStrings);
+procedure OrderListByList(var lst: TStrings; orderBy: TStrings);
 var
   orderByName, orderedName: string;
   copyList: TStrings;
@@ -244,6 +196,12 @@ begin
 end;
 
 initialization
+  // UTF8 handling setup
+  SetMultiByteConversionCodePage(CP_UTF8);
+  SetMultiByteFileSystemCodePage(CP_UTF8);
+  SetMultiByteRTLFileSystemCodePage(CP_UTF8);
+
+  // Custom format settings setup
   X4OrsFormatSettings := DefaultFormatSettings;
   X4OrsFormatSettings.DecimalSeparator := '.';
   X4OrsFormatSettings.ShortDateFormat := 'dd/mm/yyy';
@@ -252,6 +210,4 @@ initialization
   X4OrsFormatSettings.LongTimeFormat := 'hh:nn:ss.zzz';
   X4OrsFormatSettings.DateSeparator := '/';
   X4OrsFormatSettings.TimeSeparator := ':';
-
 end.
-

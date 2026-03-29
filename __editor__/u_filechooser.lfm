@@ -25,11 +25,11 @@ object FrmFileChooser: TFrmFileChooser
   end
   object LvLocType: TComboBox
     Left = 168
-    Height = 24
+    Height = 23
     Top = 7
     Width = 144
     AutoSize = False
-    ItemHeight = 0
+    ItemHeight = 15
     ItemIndex = 0
     Items.Strings = (
       'File'
@@ -100,6 +100,7 @@ object FrmFileChooser: TFrmFileChooser
     PasswordChar = #0
     TabOrder = 1
     OnButtonClick = ev_ChooseLocation
+    OnClick = ev_ChooseLocation
   end
   object LeOK: TButton
     Left = 48

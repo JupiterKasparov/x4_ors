@@ -181,13 +181,17 @@ begin
   _onlinestoptimer := 0;
   _onlineretrytimer := 0;
   _isactive := false;
-  _onlinenoise := TNoiseChannel.Create;
+  if _track.IsOnlineStream then
+     _onlinenoise := TNoiseChannel.Create
+  else
+     _onlinenoise := nil;
   Update(ssStopped, 0.0, 0, false);
 end;
 
 destructor TRadioStationSlotTrack.Destroy;
 begin
-  _onlinenoise.Free;
+  if (_onlinenoise <> nil) then
+     _onlinenoise.Free;
   _track.Free;
   inherited;
 end;

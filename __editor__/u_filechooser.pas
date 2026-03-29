@@ -10,6 +10,8 @@ uses
 
 type
 
+  TFrmFileChooserLocationType = (ffcltFile, ffcltDirectory, ffcltURL);
+
   { TFrmFileChooser }
 
   TFrmFileChooser = class(TForm)
@@ -27,8 +29,11 @@ type
   private
     function GetFileName: string;
     procedure SetFileName(fn: string);
+    function GetLocationType: TFrmFileChooserLocationType;
+    procedure SetLocationType(loc: TFrmFileChooserLocationType);
   public
     property FileName: string read GetFileName write SetFileName;
+    property LocationType: TFrmFileChooserLocationType read GetLocationType write SetLocationType;
   end;
 
 var
@@ -50,6 +55,26 @@ begin
   LvLocation.Text := fn;
 end;
 
+function TFrmFileChooser.GetLocationType: TFrmFileChooserLocationType;
+begin
+  case LvLocType.ItemIndex of
+       0: Result := ffcltFile;
+       1: Result := ffcltDirectory;
+       else Result := ffcltURL;
+  end;
+end;
+
+procedure TFrmFileChooser.SetLocationType(loc: TFrmFileChooserLocationType);
+begin
+  case loc of
+       ffcltFile: LvLocType.ItemIndex := 0;
+       ffcltDirectory: LvLocType.ItemIndex := 1;
+       else LvLocType.ItemIndex := 2;
+  end;
+  if Assigned(LvLocType.OnChange) then
+     LvLocType.OnChange(LvLocType);
+end;
+
 procedure TFrmFileChooser.ev_ChooseLocation(Sender: TObject);
 begin
   if (LvLocType.ItemIndex = 0) then
@@ -66,14 +91,14 @@ end;
 
 procedure TFrmFileChooser.ev_InitWindow(Sender: TObject);
 begin
-  If Assigned(LvLocType.OnChange) then
-     LvLocType.OnChange(LvLocType);
+  SetLocationType(ffcltFile);
   UpdateForm(self);
 end;
 
 procedure TFrmFileChooser.ev_ChangeLocationType(Sender: TObject);
 begin
   LvLocation.Button.Enabled := LvLocType.ItemIndex <> 2;
+  LvLocation.DirectInput := not LvLocation.Button.Enabled;
 end;
 
 end.

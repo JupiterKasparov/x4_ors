@@ -18,9 +18,9 @@ object FrmEditor: TFrmEditor
     Height = 480
     Top = 0
     Width = 480
-    ActivePage = PgEditStations
+    ActivePage = PgEditGlobal
     Align = alClient
-    TabIndex = 2
+    TabIndex = 0
     TabOrder = 0
     object PgEditGlobal: TTabSheet
       Caption = 'Mod properties'
@@ -722,6 +722,7 @@ object FrmEditor: TFrmEditor
                       AutoSize = False
                       ButtonCaption = 'Change'
                       ButtonWidth = 52
+                      DirectInput = False
                       FocusOnButtonClick = True
                       MaxLength = 65536
                       NumGlyphs = 1
@@ -737,26 +738,26 @@ object FrmEditor: TFrmEditor
                       Width = 144
                       Alignment = taRightJustify
                       AutoSize = False
-                      Caption = 'Play MP3 in this track:'
+                      Caption = 'Track type:'
                       Layout = tlCenter
                     end
                     object RvSlotIsMP3: TComboBox
                       Left = 152
                       Height = 23
-                      Hint = 'Whether to play multiple files in this track.'#13#10'User interactions can be explicitly disabled, even if all other factors would allow user interaction.'
+                      Hint = 'Type of this track'
                       Top = 104
                       Width = 144
                       AutoSize = False
                       ItemHeight = 15
                       ItemIndex = 0
                       Items.Strings = (
-                        'No'
-                        'Yes'
-                        'Yes (disable user interaction)'
+                        'Single-file or streamed'
+                        'Multi-file'
+                        'Multi-file (no user control)'
                       )
                       Style = csDropDownList
                       TabOrder = 3
-                      Text = 'No'
+                      Text = 'Single-file or streamed'
                       OnChange = ev_rse_SlotIsMP3
                     end
                     object LbrSlotFileName: TLabel
@@ -828,13 +829,13 @@ object FrmEditor: TFrmEditor
                       Width = 144
                       Alignment = taRightJustify
                       AutoSize = False
-                      Caption = 'MP3 list is ordered:'
+                      Caption = 'Pre-defined order:'
                       Layout = tlCenter
                     end
                     object RvSlotOrdered: TComboBox
                       Left = 152
                       Height = 23
-                      Hint = 'Whether the MP3 files should be played in a pre-defined order.'#13#10'To pre-define the playback order, use the text box below.'
+                      Hint = 'Whether this multi-file track has a pre-defined playback order.'#13#10'To pre-define the playback order, use the text box below.'
                       Top = 168
                       Width = 144
                       AutoSize = False

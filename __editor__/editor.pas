@@ -165,6 +165,14 @@ begin
   Result := logn(dampFactor, 0.5);
 end;
 
+function IsNetFile(fn: string): boolean;
+begin
+  fn := Trim(fn);
+  if (Pos('://', fn) > 0) then
+     exit(true);
+  exit(false);
+end;
+
 {$R *.lfm}
 
 { TFrmEditor }
@@ -227,7 +235,7 @@ begin
       PgEditorPages.Visible := true;
 
       // Info (if necessary)
-      if (GetStringSetting(settingsData, 'global._os_', JsonOperatingSystemString) <> JsonOperatingSystemString) then
+      if (GetStringSetting(settingsData, 'global._os_') <> JsonOperatingSystemString) then
          Application.MessageBox('Your configuration file was made for a different operating system! Please check the key bindings and file paths before using this configuration file with the mod!', '', MB_OK + MB_ICONWARNING);
     except
       CloseSettings;
@@ -263,11 +271,15 @@ begin
 end;
 
 procedure TFrmEditor.ev_MnuNew(Sender: TObject);
+var
+  newsettings: TJSONObject;
 begin
   if (settingsData <> nil) and (Application.MessageBox('Are you sure you want to start from a blank template? Any unsaved changes will be lost!', '', MB_OKCANCEL + MB_ICONQUESTION) = IDCANCEL) then
      exit;
   CloseSettings;
-  LoadSettings(TJSONObject.Create);
+  newsettings := TJSONObject.Create;
+  SetStringSetting(newsettings, 'global._os_', JsonOperatingSystemString);
+  LoadSettings(newsettings);
 end;
 
 procedure TFrmEditor.ev_MnuSave(Sender: TObject);
@@ -550,11 +562,15 @@ begin
             end
          else
             RvSlotIsMP3.ItemIndex := 0;
+         if Assigned(RvSlotIsMP3.OnChange) then
+            RvSlotIsMP3.OnChange(RvSlotIsMP3);
          RvSlotFileName.Text := GetStringSetting(slot, 'url');
          if GetBooleanSetting(slot, 'isOrdered') then
             RvSlotOrdered.ItemIndex := 1
          else
             RvSlotOrdered.ItemIndex := 0;
+         if Assigned(RvSlotOrdered.OnChange) then
+            RvSlotOrdered.OnChange(RvSlotOrdered);
          RvSlotOrderList.Lines.Clear;
          arr := GetListSetting(slot, 'orderByList');
          if (arr <> nil) then
@@ -570,12 +586,23 @@ procedure TFrmEditor.ev_rse_SlotFileName(Sender: TObject);
 var
   arr: TJSONArray;
   rs, slot: TJSONObject;
+  url: string;
 begin
   arr := SetListSetting(settingsData, 'radioStations');
   rs := TJSONObject(arr[RseStationEditorSelect.ItemIndex]);
   arr := GetListSetting(rs, 'slots');
   slot := TJSONObject(arr[RseStationEditorSlotSelect.ItemIndex]);
-  FrmFileChooser.FileName := GetStringSetting(slot, 'url');
+  url := GetStringSetting(slot, 'url');
+  if (RvSlotIsMP3.ItemIndex = 0) then
+     begin
+       if IsNetFile(url) then
+          FrmFileChooser.LocationType := ffcltURL
+       else
+          FrmFileChooser.LocationType := ffcltFile;
+     end
+  else
+     FrmFileChooser.LocationType := ffcltDirectory;
+  FrmFileChooser.FileName := url;
   if (FrmFileChooser.ShowModal = mrOK) then
      begin
        slot.Strings['url'] := FrmFileChooser.FileName;
@@ -588,6 +615,12 @@ var
   arr: TJSONArray;
   rs, slot: TJSONObject;
 begin
+  // UI update first
+  RvSlotOrdered.Enabled := RvSlotIsMP3.ItemIndex <> 0;
+  if Assigned(RvSlotOrdered.OnChange) then
+     RvSlotOrdered.OnChange(RvSlotOrdered);
+
+  // Property update
   if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
      exit;
   arr := SetListSetting(settingsData, 'radioStations');
@@ -617,6 +650,10 @@ var
   arr: TJSONArray;
   rs, slot: TJSONObject;
 begin
+  // UI update first
+  RvSlotOrderList.Enabled := RvSlotOrdered.Enabled and (RvSlotOrdered.ItemIndex <> 0);
+
+  // Property update
   if bLoadingSettings or bChangingRadioStation or bChangingRadioSlot then
      exit;
   arr := SetListSetting(settingsData, 'radioStations');

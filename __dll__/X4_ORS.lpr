@@ -148,23 +148,22 @@ end;
 
 procedure internal_FreeMemBuf;
 begin
-  {$IFDEF MSWINDOWS}
   if (SharedMemBuffer <> nil) then
      begin
+       {$IFDEF MSWINDOWS}
        UnmapViewOfFile(SharedMemBuffer);
+       {$ELSE}
+       Fpmunmap(SharedMemBuffer, SharedMemSize);
+       {$ENDIF}
        SharedMemBuffer := nil;
      end;
+  {$IFDEF MSWINDOWS}
   if (SharedMemHandle <> HANDLE(0)) then
      begin
        CloseHandle(SharedMemHandle);
        SharedMemHandle := HANDLE(0);
      end;
   {$ELSE}
-  if (SharedMemBuffer <> nil) then
-     begin
-       Fpmunmap(SharedMemBuffer, SharedMemSize);
-       SharedMemBuffer := nil;
-     end;
   if (SharedMemHandle <> -1) then
      begin
        fpClose(SharedMemHandle);
@@ -268,13 +267,15 @@ begin
                begin
                  playerid := CGetPlayerID();
                  numFactions := CGetNumAllFactions(cbool(1));
-                 SetLength(factionNames, numFactions);
+                 if (Length(factionNames) < numFactions) then
+                    SetLength(factionNames, numFactions);
                  numFactions := CGetAllFactions(@factionNames[0], numFactions, cbool(1));
                  for i := 0 to numFactions - 1 do
                      begin
                        currFaction := factionNames[i];
                        numCurrFactStations := CGetNumAllFactionStations(currFaction);
-                       SetLength(factionStations, numCurrFactStations);
+                       if (Length(factionStations) < numCurrFactStations) then
+                          SetLength(factionStations, numCurrFactStations);
                        numCurrFactStations := CGetAllFactionStations(@factionStations[0], numCurrFactStations, currFaction);
                        shortestDist := 10000000000.0; // 1 million km (1 billion m)
                        stationCount := 0;
@@ -636,12 +637,6 @@ begin
      end;
   playerAppPid := 0;
   {$ENDIF}
-end;
-
-// LIB Init
-procedure InitLib;
-begin
-  CleanupLib;
 end;
 
 // LIB Free

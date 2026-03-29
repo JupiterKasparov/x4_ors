@@ -12,6 +12,7 @@ procedure SetAppLogFile(fn: string);
 procedure Log(category, msg: string);
 procedure LogError(msg: string);
 procedure LogError(xcpt: TObject; addr: Pointer);
+procedure LogLastError;
 
 implementation
 
@@ -68,6 +69,11 @@ begin
      LogError(Format('Exception %s at address 0x%p - %s', [xcpt.ClassName, addr, Exception(xcpt).Message]))
   else
      LogError(Format('Exception %s at address 0x%p', [xcpt.ClassName, addr]));
+end;
+
+procedure LogLastError;
+begin
+  LogError(SysErrorMessage(GetLastOSError));
 end;
 
 initialization

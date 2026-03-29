@@ -17,6 +17,7 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
+      <RevisionNr Value="1"/>
       <StringTable CompanyName="Jupiter" FileDescription="X4_ORS configuration editor" InternalName="x4_ors_editor" OriginalFilename="x4_ors_editor" ProductVersion="X4_ORS settings editor"/>
     </VersionInfo>
     <BuildModes>

@@ -96,7 +96,6 @@ end;
 
 function GetPlatformKeyName(vk: Word): string;
 var
-  lsym: TKeySym;
   pName: PChar;
 begin
   Result := '';
